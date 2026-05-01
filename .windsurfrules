@@ -1,0 +1,4 @@
+# SSOT Enforcement
+You must strictly adhere to the rules defined in .ai-rules/*.md.
+Primary focus: Factual accuracy, No emotions, Minimal diffs.
+Refer to AGENTS.md for the project structure and rule hub.

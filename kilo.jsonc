@@ -1,3 +1,0 @@
-{
-  "systemPrompt": "Act based on the rules defined in .ai-rules/. Prioritize factual accuracy and minimal diffs. Refer to AGENTS.md for the hub of truth."
-}

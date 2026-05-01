@@ -1,68 +1,70 @@
-# README_ja
+# Simple Usage Monitor
 
-## 特徴
+Windsurf / OpenRouter の使用量をモニタリングする Tkinter + Playwright アプリ。
 
-- **AGENTS.md**: AI開発ルール（共通ルール）
-- **.githooks/**: Git Hookで物理的に強制される制約
-- **gitleaks + パターンマッチ**: 機密情報・環境固有情報の多層ガード（ローカル optional + CI 必須）
+## 必要要件
 
-## セットアップ
+- Python 3.12+
+- [uv](https://astral.sh/uv/)
 
-初回のみ `.githooks/README.md` の手順に従って Git Hook を有効化してください。
+## 起動
+
+```bash
+chmod +x run.sh
+
+# 通常起動（バックグラウンド）
+./run.sh
+
+# デバッグモード（ターミナルにログ表示）
+./run.sh --debug
+```
+
+`run.sh` が venv 作成、依存インストール（Playwright, PyYAML）、Chromium セットアップ、アプリ起動を自動で行います。
+
+## 使い方
+
+1. 各サービスの **Login** ボタンをクリック → ブラウザが開く
+2. Google 等でログイン（自動検出される）
+3. ログイン完了後、データ取得してブラウザが閉じる
+4. 以降は30分間隔で自動更新（Settings で変更可）
+5. **Refresh** ボタンで手動更新
+
+セッション Cookie は `sessions/` に保存され、再起動後も再利用されます。
+
+## 設定
+
+`config.yaml`:
+
+```yaml
+headless: false
+refresh_interval: 30      # 分
+services:
+  windsurf:
+    enabled: true
+    url: https://windsurf.com/subscription/usage
+  openrouter:
+    enabled: true
+    url: https://openrouter.ai/activity
+thresholds:
+  windsurf_daily: 30       # 残量%がこの値以下でオレンジ表示
+  windsurf_weekly: 20
+```
 
 ## プロジェクト構成
 
 ```
-.
-├── AGENTS.md                          # AI開発ルール（共通）
-├── .githooks/                         # Git Hook と機密情報スキャナ（詳細は .githooks/README.md）
-├── .github/
-│   ├── pull_request_template.md       # PRテンプレート
-│   └── workflows/
-│       ├── pr-body-validator.yml      # PRタイトル・本文バリデーション
-│       └── sensitive-info-guard.yml   # PR本文・コメントの機密情報検知（.githooks/ と連携）
-├── README.md                          # このファイル(README, README_ja)
-├── main.go                            # アプリケーションエントリポイント
-├── pkg/                               # プロジェクト固有のパッケージ
-│   ├── handler/                       # HTTPハンドラ
-│   ├── service/                       # ビジネスロジック
-│   └── model/                         # データモデル
-└── frontend/                          # フロントエンド（必要な場合）
-    └── src/
+├── main.py           # Tkinter GUI アプリ
+├── config.yaml       # 設定ファイル
+├── run.sh            # 起動スクリプト (Linux/WSL)
+└── scrapers/
+    ├── __init__.py
+    ├── base.py       # BaseScraper（Playwright セッション管理）
+    ├── windsurf.py   # Windsurf スクレイパー
+    └── openrouter.py # OpenRouter スクレイパー
 ```
 
-※ プロジェクトに合わせてカスタマイズしてください
+## トラブルシューティング
 
-## テンプレートの使い方
-
-1. GitHubの「Use this template」ボタンで新規リポジトリを作成
-2. リポジトリをクローン
-3. 上記セットアップ手順を実行
-4. プロジェクト固有の構成に合わせてカスタマイズ
-5. AGENTS.mdを参考に、プロジェクト固有のルールを追加（必要な場合）
-
-## 機密情報・環境固有情報の混入防止
-
-Git/GitHub に永続化される全ての文字列（commit message, コード, PR本文, コメント等）への混入を、ローカル hook (`.githooks/`) と GitHub Actions の多層で block します。
-
-**検出層:**
-
-| 層　　　　　　　　　　　　　　　　　　　　　　　　　| 検出対象　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　| 発火　　　　　　　　　　　　　　　　　　　　　　　　|
-| -----------------------------------------------------| -----------------------------------------------------------------------------| -----------------------------------------------------|
-| パターンマッチ (`.githooks/sensitive-patterns.txt`) | ローカル絶対パス、RFC1918 IP、プロジェクト固有識別子等の明示パターン　　　　| commit / push / PR　　　　　　　　　　　　　　　　　|
-| gitleaks　　　　　　　　　　　　　　　　　　　　　　| 既知シークレット形式（AWS/GCP/Stripe/Slack token 等）、高エントロピー文字列 | commit / push（ローカルは optional）/ PR（CI 必須） |
-
-**既定のパターンマッチ検出対象:**
-
-- ローカル絶対パス（`/home/<user>/`, `/Users/<user>/`, `C:\Users\<user>\`）
-- プライベートネットワーク IP（RFC1918: `10.x`, `172.16-31.x`, `192.168.x`）
-- プライベートリポジトリ識別子（プロジェクト固有で追記）
-- GitHub 他リポジトリ参照の汎用パターン（警告のみ）
-
-パターン定義の追記・書式・ライブラリ API・ローカル gitleaks のインストール・Branch Protection への組み込み手順は `.githooks/README.md` を参照してください。
-
-## 開発ルール
-
-- Git Hookで物理的に強制される制約に従う
-- 不明点はAGENTS.mdのルールに従い確認する
-- 環境/Git制約違反時は `.githooks/` のエラーログに従い修正する
+- **セッション切れ**: 対象サービスに Login ボタンが再表示されるのでクリック
+- **ブラウザが閉じない**: GUI ウィンドウを閉じれば自動クリーンアップ
+- **Google ログインブロック**: 試行回数が多すぎた場合、1〜2時間待つ

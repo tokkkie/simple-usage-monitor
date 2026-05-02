@@ -85,6 +85,7 @@ def save_config(config: dict[str, Any]) -> None:
 
 class UsageMonitorApp:
     def __init__(self, root: tk.Tk, config: dict[str, Any]) -> None:
+        """アプリの初期化：スクレイパー・UI・設定を構築する"""
         self.root = root
         self.config = config
         self.headless = bool(config.get("headless", False))
@@ -102,6 +103,7 @@ class UsageMonitorApp:
         # 起動時は自動refreshしない（ログイン後に開始）
 
     def _build_scrapers(self) -> dict[str, Any]:
+        """config.yaml の services 設定を元にスクレイパーを生成する"""
         services_cfg = self.config.get("services", {})
         scrapers = {}
         
@@ -129,6 +131,7 @@ class UsageMonitorApp:
         return scrapers
 
     def _build_ui(self) -> None:
+        """メインウィンドウ全体のUIを構築する"""
         self.root.title("Usage Monitor")
         self.root.geometry(self.config.get("window_size", "500x520"))
         self.root.resizable(True, True)
@@ -170,6 +173,7 @@ class UsageMonitorApp:
                 self._build_openrouter_panel(key, container)
 
     def _build_windsurf_panel(self, container: tk.Frame) -> None:
+        """Windsurf 用パネル（daily/weekly クォータ表示）を構築する"""
         key = "windsurf"
         parent = tk.Frame(container, bg=BG_SECTION, padx=15, pady=10)
         parent.pack(fill="x", pady=8)
@@ -203,6 +207,7 @@ class UsageMonitorApp:
         self._setup_panel_click(key)
 
     def _build_openrouter_panel(self, key: str, container: tk.Frame) -> None:
+        """OpenRouter 用パネル（requests/tokens メトリクス表示）を構築する"""
         parent = tk.Frame(container, bg=BG_SECTION, padx=15, pady=10)
         parent.pack(fill="x", pady=8)
         self.service_parent_frames[key] = parent
@@ -235,11 +240,13 @@ class UsageMonitorApp:
         self._setup_panel_click(key)
 
     def _set_status(self, key: str, text: str, color: str) -> None:
+        """サービスパネルのステータスラベルのテキストと色を更新する"""
         lbl = self.service_status_labels.get(key)
         if lbl:
             lbl.config(text=text, fg=color)
 
     def _setup_panel_click(self, key: str) -> None:
+        """パネルクリック時の動作を設定する（未ログイン→ログイン、ログイン済み→ブラウザ表示）"""
         def on_click(e):
             if self.service_logged_in.get(key, False):
                 webbrowser.open(self.config["services"][key]["url"])
@@ -332,6 +339,7 @@ class UsageMonitorApp:
             logging.error(f"[{key}] Display update failed: {exc}", exc_info=True)
 
     def refresh(self) -> None:
+        """全ログイン済みサービスのデータを手動または自動で更新する"""
         if self._refresh_thread and self._refresh_thread.is_alive():
             return
         self.status_var.set("Refreshing...")
@@ -342,6 +350,7 @@ class UsageMonitorApp:
         self._refresh_thread.start()
 
     def _refresh_worker(self) -> None:
+        """別スレッドでスクレイピングを実行し、結果をUIスレッドに渡す"""
         try:
             results, errors = asyncio.run(self._fetch_all())
         except Exception as exc:  # pragma: no cover
@@ -351,6 +360,7 @@ class UsageMonitorApp:
         self.root.after(0, lambda: self._apply_results(results, errors))
 
     async def _fetch_all(self) -> tuple[dict[str, Any], dict[str, str]]:
+        """ログイン済みの全サービスを並列スクレイピングし、結果とエラーを返す"""
         async def run_scraper(name: str, scraper: Any):
             try:
                 data = await scraper.run()
@@ -375,6 +385,7 @@ class UsageMonitorApp:
         return results, errors
 
     def _apply_results(self, results: dict[str, Any], errors: dict[str, str]) -> None:
+        """スクレイピング結果をUIに反映し、次回自動更新をスケジュールする"""
         # セッション切れエラーをサービス別にチェック
         for svc_key, err in errors.items():
             if "Session expired" in str(err):
@@ -439,6 +450,7 @@ class UsageMonitorApp:
         vars_dict["tok_1d"].set(str(one_d.get("tokens", "--")))
 
     def _update_windsurf_quota(self, quota_type: str, data: dict) -> None:
+        """Windsurf の daily/weekly 各クォータ行を更新し、閾値で背景色を変える"""
         percent = data.get("percent", 0)
         vars_ = self.service_vars[f"windsurf_{quota_type}"]
         vars_["error"].set("")
@@ -450,6 +462,7 @@ class UsageMonitorApp:
         )
 
     def _update_windsurf_display(self, data: dict[str, Any]) -> None:
+        """Windsurf の全クォータ（daily/weekly）表示を更新する"""
         for quota_type in ("daily", "weekly"):
             if quota_data := data.get(quota_type):
                 self._update_windsurf_quota(quota_type, quota_data)

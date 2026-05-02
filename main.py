@@ -86,150 +86,140 @@ class UsageMonitorApp:
         return scrapers
 
     def _build_ui(self) -> None:
-        self.root.title("Simple Usage Monitor")
-        self.root.geometry("900x700")  # より大きいデフォルトサイズ
+        # ダークテーマ色定義
+        BG_DARK = "#1a1a1a"
+        BG_SECTION = "#2a2a2a"
+        FG_WHITE = "#ffffff"
+        FG_GRAY = "#b0b0b0"
         
-        # リサイズを有効化（最小・最大サイズを設定）
+        self.root.title("Usage Monitor")
+        self.root.geometry("900x700")
         self.root.resizable(True, True)
-        self.root.minsize(600, 400)  # 最小サイズ
-        self.root.maxsize(1920, 1080)  # 最大サイズ
-
-        # フォントサイズを1.8倍に設定
-        default_font = ("TkDefaultFont", 16)  # 約9pt * 1.8
+        self.root.minsize(600, 400)
+        self.root.maxsize(1920, 1080)
+        self.root.config(bg=BG_DARK)
+        
+        # フォントサイズ
+        default_font = ("TkDefaultFont", 16)
         self.root.option_add("*Font", default_font)
 
-        container = ttk.Frame(self.root, padding=22)  # 12 * 1.8
-        container.pack(fill="both", expand=True)
-
-        self.status_var = tk.StringVar(value="Please login")
-        status_row = ttk.Frame(container)
-        status_row.pack(fill="x", pady=(0, 14))  # 8 * 1.8
-        ttk.Label(status_row, textvariable=self.status_var, font=("TkDefaultFont", 16)).pack(side="left")
+        # ヘッダーバー（黒背景）
+        header = tk.Frame(self.root, bg=BG_DARK, height=60)
+        header.pack(fill="x", side="top")
+        header.pack_propagate(False)
         
-        # ボタンを右側に配置（Loginはサービス別なのでここにはない）
-        button_frame = ttk.Frame(status_row)
-        button_frame.pack(side="right")
-        self.refresh_button = ttk.Button(button_frame, text="Refresh", command=self.refresh, state="disabled")
+        title_label = tk.Label(header, text="Usage Monitor", font=("TkDefaultFont", 18, "bold"), 
+                              bg=BG_DARK, fg=FG_WHITE)
+        title_label.pack(side="left", padx=20, pady=10)
+        
+        # ボタンを右側に配置
+        button_frame = tk.Frame(header, bg=BG_DARK)
+        button_frame.pack(side="right", padx=20, pady=10)
+        self.refresh_button = tk.Button(button_frame, text="RELOAD", command=self.refresh, 
+                                       bg="#444444", fg=FG_WHITE, font=("TkDefaultFont", 12, "bold"),
+                                       relief="flat", padx=15, pady=5, state="disabled")
         self.refresh_button.pack(side="left", padx=5)
-        ttk.Button(button_frame, text="Settings", command=self.open_settings).pack(side="left")
+        tk.Button(button_frame, text="SETTING", command=self.open_settings,
+                 bg="#444444", fg=FG_WHITE, font=("TkDefaultFont", 12, "bold"),
+                 relief="flat", padx=15, pady=5).pack(side="left", padx=5)
+
+        # コンテンツエリア
+        container = tk.Frame(self.root, bg=BG_DARK)
+        container.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        self.status_var = tk.StringVar(value="")
+        self._status_label = tk.Label(container, textvariable=self.status_var, 
+                                     bg=BG_DARK, fg=FG_GRAY, font=("TkDefaultFont", 12))
+        self._status_label.pack(fill="x", pady=(0, 10))
 
         for key in self.scrapers.keys():
             if key == "windsurf":
                 # Windsurf親フレーム
-                parent_frame = tk.Frame(container, relief="groove", borderwidth=2, padx=10, pady=10)
-                parent_frame.pack(fill="x", pady=9)
-                title_row_ws = tk.Frame(parent_frame)
-                title_row_ws.pack(fill="x", pady=(0, 5))
-                ttk.Label(title_row_ws, text="Windsurf", font=("TkDefaultFont", 18, "bold")).pack(side="left")
-                login_btn = ttk.Button(title_row_ws, text="Login", command=lambda k=key: self.login_service(k))
-                login_btn.pack(side="right")
+                parent_frame = tk.Frame(container, bg=BG_SECTION, padx=15, pady=10)
+                parent_frame.pack(fill="x", pady=8)
+                
+                title_label = tk.Label(parent_frame, text="WindSurf", font=("TkDefaultFont", 16, "bold"),
+                                      bg=BG_SECTION, fg=FG_WHITE)
+                title_label.pack(anchor="w", pady=(0, 8))
+                
+                login_btn = tk.Button(parent_frame, text="要ログイン", command=lambda k=key: self.login_service(k),
+                                     bg="#444444", fg=FG_WHITE, font=("TkDefaultFont", 10),
+                                     relief="flat", padx=10, pady=3)
+                login_btn.place(in_=parent_frame, relx=1.0, x=-10, y=5, anchor="ne")
                 self.service_login_btns[key] = login_btn
                 self.service_logged_in[key] = False
                 
-                # Daily/Weekly子フレーム
+                # Daily/Weekly行
                 for quota_type in ["daily", "weekly"]:
-                    child_frame = tk.Frame(parent_frame, padx=15)
-                    child_frame.pack(fill="x", pady=5)
+                    row_frame = tk.Frame(parent_frame, bg=BG_SECTION)
+                    row_frame.pack(fill="x", pady=4)
                     
-                    # タイトル行
-                    title_row = tk.Frame(child_frame)
-                    title_row.pack(fill="x")
-                    ttk.Label(title_row, text=quota_type.capitalize(), font=("TkDefaultFont", 18, "bold")).pack(side="left")
-                    
-                    # エラー表示用（通常は非表示）
-                    error_var = tk.StringVar(value="")
-                    error_label = ttk.Label(title_row, textvariable=error_var, font=("TkDefaultFont", 14), foreground="red")
-                    error_label.pack(side="left", padx=10)
-                    
-                    # データ行（2カラム）
-                    data_frame = tk.Frame(child_frame)
-                    data_frame.pack(fill="x", pady=(5, 0))
+                    label_text = quota_type.capitalize()
+                    label = tk.Label(row_frame, text=label_text, font=("TkDefaultFont", 13),
+                                    bg=BG_SECTION, fg=FG_GRAY, width=8, anchor="w")
+                    label.pack(side="left")
                     
                     percent_var = tk.StringVar(value="--")
                     reset_var = tk.StringVar(value="--")
                     
-                    # 左カラム: Remaining
-                    left_col = tk.Frame(data_frame)
-                    left_col.pack(side="left", fill="x", expand=True)
-                    ttk.Label(left_col, text="Remaining:", font=("TkDefaultFont", 14)).pack(anchor="w")
-                    ttk.Label(left_col, textvariable=percent_var, font=("TkDefaultFont", 22, "bold")).pack(anchor="w")
+                    data_label = tk.Label(row_frame, textvariable=percent_var, font=("TkDefaultFont", 14, "bold"),
+                                         bg=BG_SECTION, fg=FG_WHITE)
+                    data_label.pack(side="left", padx=(20, 0))
                     
-                    # 右カラム: Reset
-                    right_col = tk.Frame(data_frame)
-                    right_col.pack(side="left", fill="x", expand=True)
-                    ttk.Label(right_col, text="Reset in", font=("TkDefaultFont", 14)).pack(anchor="w")
-                    ttk.Label(right_col, textvariable=reset_var, font=("TkDefaultFont", 22, "bold")).pack(anchor="w")
+                    reset_label = tk.Label(row_frame, textvariable=reset_var, font=("TkDefaultFont", 13),
+                                          bg=BG_SECTION, fg=FG_GRAY)
+                    reset_label.pack(side="left", padx=(20, 0))
+                    
+                    error_var = tk.StringVar(value="")
                     
                     self.service_vars[f"windsurf_{quota_type}"] = {
                         "error": error_var,
                         "percent": percent_var,
                         "reset": reset_var,
                     }
-                    self.service_frames[f"windsurf_{quota_type}"] = child_frame
+                    self.service_frames[f"windsurf_{quota_type}"] = row_frame
             else:
                 # OpenRouter親フレーム
-                parent_frame = tk.Frame(container, relief="groove", borderwidth=2, padx=10, pady=10)
-                parent_frame.pack(fill="x", pady=9)
+                parent_frame = tk.Frame(container, bg=BG_SECTION, padx=15, pady=10)
+                parent_frame.pack(fill="x", pady=8)
                 
-                # タイトル行
-                title_row = tk.Frame(parent_frame)
-                title_row.pack(fill="x", pady=(0, 5))
-                ttk.Label(title_row, text=key.capitalize(), font=("TkDefaultFont", 18, "bold")).pack(side="left")
-                login_btn = ttk.Button(title_row, text="Login", command=lambda k=key: self.login_service(k))
-                login_btn.pack(side="right")
+                title_label = tk.Label(parent_frame, text="OpenRouter", font=("TkDefaultFont", 16, "bold"),
+                                      bg=BG_SECTION, fg=FG_WHITE)
+                title_label.pack(anchor="w", pady=(0, 8))
+                
+                login_btn = tk.Button(parent_frame, text="要ログイン", command=lambda k=key: self.login_service(k),
+                                     bg="#444444", fg=FG_WHITE, font=("TkDefaultFont", 10),
+                                     relief="flat", padx=10, pady=3)
+                login_btn.place(in_=parent_frame, relx=1.0, x=-10, y=5, anchor="ne")
                 self.service_login_btns[key] = login_btn
                 self.service_logged_in[key] = False
                 
-                # エラー表示用
                 error_var = tk.StringVar(value="")
-                error_label = ttk.Label(title_row, textvariable=error_var, font=("TkDefaultFont", 14), foreground="red")
-                error_label.pack(side="left", padx=10)
                 
-                # Hour 子フレーム
-                hour_frame = tk.Frame(parent_frame, padx=15)
-                hour_frame.pack(fill="x", pady=5)
-                ttk.Label(hour_frame, text="Hour", font=("TkDefaultFont", 18, "bold")).pack(anchor="w")
-                
-                hour_data_frame = tk.Frame(hour_frame, padx=15)
-                hour_data_frame.pack(fill="x", pady=(5, 0))
-                
+                # Hour/Day メトリクス
                 req_1h_var = tk.StringVar(value="--")
                 tok_1h_var = tk.StringVar(value="--")
-                
-                # Requests列
-                req_col = tk.Frame(hour_data_frame)
-                req_col.pack(side="left", fill="x", expand=True)
-                ttk.Label(req_col, text="Requests:", font=("TkDefaultFont", 14)).pack(anchor="w")
-                ttk.Label(req_col, textvariable=req_1h_var, font=("TkDefaultFont", 22, "bold")).pack(anchor="w")
-                
-                # Tokens列
-                tok_col = tk.Frame(hour_data_frame)
-                tok_col.pack(side="left", fill="x", expand=True)
-                ttk.Label(tok_col, text="Tokens:", font=("TkDefaultFont", 14)).pack(anchor="w")
-                ttk.Label(tok_col, textvariable=tok_1h_var, font=("TkDefaultFont", 22, "bold")).pack(anchor="w")
-                
-                # Day 子フレーム
-                day_frame = tk.Frame(parent_frame, padx=15)
-                day_frame.pack(fill="x", pady=5)
-                ttk.Label(day_frame, text="Day", font=("TkDefaultFont", 18, "bold")).pack(anchor="w")
-                
-                day_data_frame = tk.Frame(day_frame, padx=15)
-                day_data_frame.pack(fill="x", pady=(5, 0))
-                
                 req_1d_var = tk.StringVar(value="--")
                 tok_1d_var = tk.StringVar(value="--")
                 
-                # Requests列
-                req_col_d = tk.Frame(day_data_frame)
-                req_col_d.pack(side="left", fill="x", expand=True)
-                ttk.Label(req_col_d, text="Requests:", font=("TkDefaultFont", 14)).pack(anchor="w")
-                ttk.Label(req_col_d, textvariable=req_1d_var, font=("TkDefaultFont", 22, "bold")).pack(anchor="w")
+                metrics = [
+                    ("Request / h", req_1h_var),
+                    ("Token / h", tok_1h_var),
+                    ("Request / d", req_1d_var),
+                    ("Token / d", tok_1d_var),
+                ]
                 
-                # Tokens列
-                tok_col_d = tk.Frame(day_data_frame)
-                tok_col_d.pack(side="left", fill="x", expand=True)
-                ttk.Label(tok_col_d, text="Tokens:", font=("TkDefaultFont", 14)).pack(anchor="w")
-                ttk.Label(tok_col_d, textvariable=tok_1d_var, font=("TkDefaultFont", 22, "bold")).pack(anchor="w")
+                for metric_name, metric_var in metrics:
+                    row_frame = tk.Frame(parent_frame, bg=BG_SECTION)
+                    row_frame.pack(fill="x", pady=3)
+                    
+                    label = tk.Label(row_frame, text=metric_name, font=("TkDefaultFont", 13),
+                                    bg=BG_SECTION, fg=FG_GRAY, width=15, anchor="w")
+                    label.pack(side="left")
+                    
+                    value_label = tk.Label(row_frame, textvariable=metric_var, font=("TkDefaultFont", 14, "bold"),
+                                          bg=BG_SECTION, fg=FG_WHITE)
+                    value_label.pack(side="left", padx=(20, 0))
                 
                 self.service_vars[key] = {
                     "error": error_var,
@@ -430,9 +420,9 @@ class UsageMonitorApp:
             # 閾値チェック
             threshold = self.thresholds.get("windsurf_daily", 30)
             if percent <= threshold:
-                self.service_frames["windsurf_daily"].config(bg="#FF8C00")  # オレンジ
+                self.service_frames["windsurf_daily"].config(bg="#3a3a2a")  # 暗いオレンジ
             else:
-                self.service_frames["windsurf_daily"].config(bg="#D3D3D3")  # ライトグレー
+                self.service_frames["windsurf_daily"].config(bg="#2a2a2a")  # 通常
         
         if weekly:
             percent = weekly.get("percent", 0)
@@ -443,44 +433,67 @@ class UsageMonitorApp:
             # 閾値チェック
             threshold = self.thresholds.get("windsurf_weekly", 20)
             if percent <= threshold:
-                self.service_frames["windsurf_weekly"].config(bg="#FF8C00")  # オレンジ
+                self.service_frames["windsurf_weekly"].config(bg="#3a3a2a")  # 暗いオレンジ
             else:
-                self.service_frames["windsurf_weekly"].config(bg="#D3D3D3")  # ライトグレー
+                self.service_frames["windsurf_weekly"].config(bg="#2a2a2a")  # 通常
 
     def open_settings(self) -> None:
         """設定ダイアログを開く"""
+        BG_DARK = "#1a1a1a"
+        BG_SECTION = "#2a2a2a"
+        FG_WHITE = "#ffffff"
+        FG_GRAY = "#b0b0b0"
+        
         dialog = tk.Toplevel(self.root)
         dialog.title("Settings")
-        dialog.geometry("540x400")  # 300x220 * 1.8
+        dialog.geometry("540x400")
         dialog.resizable(False, False)
+        dialog.config(bg=BG_DARK)
         
-        frame = ttk.Frame(dialog, padding=20)
+        frame = tk.Frame(dialog, bg=BG_DARK, padx=20, pady=20)
         frame.pack(fill="both", expand=True)
         
         # 更新間隔
-        ttk.Label(frame, text="Refresh interval (minutes):", font=("TkDefaultFont", 14)).grid(row=0, column=0, sticky="w", pady=10)
+        label1 = tk.Label(frame, text="Refresh interval (minutes):", font=("TkDefaultFont", 14),
+                         bg=BG_DARK, fg=FG_WHITE)
+        label1.grid(row=0, column=0, sticky="w", pady=10)
         refresh_var = tk.IntVar(value=self.config.get("refresh_interval", 10))
-        ttk.Entry(frame, textvariable=refresh_var, font=("TkDefaultFont", 14), width=10).grid(row=0, column=1, sticky="w")
+        entry1 = tk.Entry(frame, textvariable=refresh_var, font=("TkDefaultFont", 14), width=10,
+                         bg=BG_SECTION, fg=FG_WHITE, insertbackground=FG_WHITE)
+        entry1.grid(row=0, column=1, sticky="w")
         
         # Windsurf Daily 閾値
-        ttk.Label(frame, text="Windsurf Daily threshold (%):", font=("TkDefaultFont", 14)).grid(row=1, column=0, sticky="w", pady=10)
+        label2 = tk.Label(frame, text="Windsurf Daily threshold (%):", font=("TkDefaultFont", 14),
+                         bg=BG_DARK, fg=FG_WHITE)
+        label2.grid(row=1, column=0, sticky="w", pady=10)
         daily_threshold_var = tk.IntVar(value=self.thresholds.get("windsurf_daily", 30))
-        ttk.Entry(frame, textvariable=daily_threshold_var, font=("TkDefaultFont", 14), width=10).grid(row=1, column=1, sticky="w")
+        entry2 = tk.Entry(frame, textvariable=daily_threshold_var, font=("TkDefaultFont", 14), width=10,
+                         bg=BG_SECTION, fg=FG_WHITE, insertbackground=FG_WHITE)
+        entry2.grid(row=1, column=1, sticky="w")
         
         # Windsurf Weekly 閾値
-        ttk.Label(frame, text="Windsurf Weekly threshold (%):", font=("TkDefaultFont", 14)).grid(row=2, column=0, sticky="w", pady=10)
+        label3 = tk.Label(frame, text="Windsurf Weekly threshold (%):", font=("TkDefaultFont", 14),
+                         bg=BG_DARK, fg=FG_WHITE)
+        label3.grid(row=2, column=0, sticky="w", pady=10)
         weekly_threshold_var = tk.IntVar(value=self.thresholds.get("windsurf_weekly", 20))
-        ttk.Entry(frame, textvariable=weekly_threshold_var, font=("TkDefaultFont", 14), width=10).grid(row=2, column=1, sticky="w")
+        entry3 = tk.Entry(frame, textvariable=weekly_threshold_var, font=("TkDefaultFont", 14), width=10,
+                         bg=BG_SECTION, fg=FG_WHITE, insertbackground=FG_WHITE)
+        entry3.grid(row=2, column=1, sticky="w")
         
         # サービス有効/無効
-        ttk.Label(frame, text="Enabled services:", font=("TkDefaultFont", 14)).grid(row=3, column=0, sticky="w", pady=10, columnspan=2)
+        label4 = tk.Label(frame, text="Enabled services:", font=("TkDefaultFont", 14),
+                         bg=BG_DARK, fg=FG_WHITE)
+        label4.grid(row=3, column=0, sticky="w", pady=10, columnspan=2)
         
         service_vars = {}
         services_cfg = self.config.get("services", {})
         row = 4
         for key in ["windsurf", "openrouter"]:
             var = tk.BooleanVar(value=services_cfg.get(key, {}).get("enabled", True))
-            ttk.Checkbutton(frame, text=key.capitalize(), variable=var, style="TCheckbutton").grid(row=row, column=0, sticky="w", padx=20)
+            cb = tk.Checkbutton(frame, text=key.capitalize(), variable=var,
+                               bg=BG_DARK, fg=FG_WHITE, selectcolor=BG_SECTION, activebackground=BG_DARK,
+                               activeforeground=FG_WHITE, font=("TkDefaultFont", 12))
+            cb.grid(row=row, column=0, sticky="w", padx=20)
             service_vars[key] = var
             row += 1
         
@@ -504,10 +517,16 @@ class UsageMonitorApp:
             self.status_var.set("Settings saved")
         
         # ボタン
-        button_frame = ttk.Frame(frame)
+        button_frame = tk.Frame(frame, bg=BG_DARK)
         button_frame.grid(row=row, column=0, columnspan=2, pady=20)
-        ttk.Button(button_frame, text="Save", command=save_settings).pack(side="left", padx=5)
-        ttk.Button(button_frame, text="Cancel", command=dialog.destroy).pack(side="left")
+        save_btn = tk.Button(button_frame, text="Save", command=save_settings,
+                            bg="#444444", fg=FG_WHITE, font=("TkDefaultFont", 12),
+                            relief="flat", padx=15, pady=5)
+        save_btn.pack(side="left", padx=5)
+        cancel_btn = tk.Button(button_frame, text="Cancel", command=dialog.destroy,
+                              bg="#444444", fg=FG_WHITE, font=("TkDefaultFont", 12),
+                              relief="flat", padx=15, pady=5)
+        cancel_btn.pack(side="left")
 
 
 def main() -> None:

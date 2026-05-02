@@ -52,7 +52,7 @@ class UsageMonitorApp:
         self.service_vars: dict[str, dict[str, tk.StringVar]] = {}
         self.service_frames: dict[str, tk.Widget] = {}  # 背景色変更用
         self.service_parent_frames: dict[str, tk.Frame] = {}  # クリック領域
-        self.service_login_btns: dict[str, tk.Button] = {}  # サービス別ログインボタン
+        self.service_status_labels: dict[str, tk.Label] = {}  # ステータステキスト
         self.service_logged_in: dict[str, bool] = {}  # サービス別ログイン状態
         self._service_threads: dict[str, threading.Thread] = {}  # サービス別スレッド
         self._refresh_thread: threading.Thread | None = None
@@ -141,15 +141,14 @@ class UsageMonitorApp:
                 parent_frame.pack(fill="x", pady=8)
                 self.service_parent_frames[key] = parent_frame
                 
-                title_label = tk.Label(parent_frame, text="WindSurf", font=("TkDefaultFont", 16, "bold"),
-                                      bg=BG_SECTION, fg=FG_WHITE)
-                title_label.pack(anchor="w", pady=(0, 8))
-                
-                login_btn = tk.Button(parent_frame, text="Login", command=lambda k=key: self.login_service(k),
-                                     bg="#444444", fg=FG_WHITE, font=("TkDefaultFont", 10),
-                                     relief="flat", padx=10, pady=3)
-                login_btn.pack(side="right", pady=(0, 8))
-                self.service_login_btns[key] = login_btn
+                title_row = tk.Frame(parent_frame, bg=BG_SECTION)
+                title_row.pack(fill="x", pady=(0, 8))
+                tk.Label(title_row, text="WindSurf", font=("TkDefaultFont", 16, "bold"),
+                        bg=BG_SECTION, fg=FG_WHITE).pack(side="left")
+                status_lbl = tk.Label(title_row, text="Not logged in",
+                                     font=("TkDefaultFont", 11), bg=BG_SECTION, fg="#666666")
+                status_lbl.pack(side="left", padx=(12, 0))
+                self.service_status_labels[key] = status_lbl
                 self.service_logged_in[key] = False
                 
                 # Daily/Weekly行
@@ -181,21 +180,21 @@ class UsageMonitorApp:
                         "reset": reset_var,
                     }
                     self.service_frames[f"windsurf_{quota_type}"] = row_frame
+                self._setup_panel_click(key)
             else:
                 # OpenRouter親フレーム
                 parent_frame = tk.Frame(container, bg=BG_SECTION, padx=15, pady=10)
                 parent_frame.pack(fill="x", pady=8)
                 self.service_parent_frames[key] = parent_frame
                 
-                title_label = tk.Label(parent_frame, text="OpenRouter", font=("TkDefaultFont", 16, "bold"),
-                                      bg=BG_SECTION, fg=FG_WHITE)
-                title_label.pack(anchor="w", pady=(0, 8))
-                
-                login_btn = tk.Button(parent_frame, text="Login", command=lambda k=key: self.login_service(k),
-                                     bg="#444444", fg=FG_WHITE, font=("TkDefaultFont", 10),
-                                     relief="flat", padx=10, pady=3)
-                login_btn.pack(side="right", pady=(0, 8))
-                self.service_login_btns[key] = login_btn
+                title_row = tk.Frame(parent_frame, bg=BG_SECTION)
+                title_row.pack(fill="x", pady=(0, 8))
+                tk.Label(title_row, text="OpenRouter", font=("TkDefaultFont", 16, "bold"),
+                        bg=BG_SECTION, fg=FG_WHITE).pack(side="left")
+                status_lbl = tk.Label(title_row, text="Not logged in",
+                                     font=("TkDefaultFont", 11), bg=BG_SECTION, fg="#666666")
+                status_lbl.pack(side="left", padx=(12, 0))
+                self.service_status_labels[key] = status_lbl
                 self.service_logged_in[key] = False
                 
                 error_var = tk.StringVar(value="")
@@ -233,14 +232,22 @@ class UsageMonitorApp:
                     "tok_1d": tok_1d_var,
                 }
                 self.service_frames[key] = parent_frame
+                self._setup_panel_click(key)
 
-    def _bind_panel_click(self, key: str) -> None:
-        url = self.config["services"][key]["url"]
-        def open_url(e, u=url):
-            webbrowser.open(u)
+    def _set_status(self, key: str, text: str, color: str) -> None:
+        lbl = self.service_status_labels.get(key)
+        if lbl:
+            lbl.config(text=text, fg=color)
+
+    def _setup_panel_click(self, key: str) -> None:
+        def on_click(e):
+            if self.service_logged_in.get(key, False):
+                webbrowser.open(self.config["services"][key]["url"])
+            else:
+                self.login_service(key)
         def bind_recursive(widget):
             try:
-                widget.bind("<Button-1>", open_url)
+                widget.bind("<Button-1>", on_click)
                 widget.config(cursor="hand2")
             except Exception:
                 pass
@@ -253,7 +260,7 @@ class UsageMonitorApp:
         thread = self._service_threads.get(key)
         if thread and thread.is_alive():
             return
-        self.service_login_btns[key].config(state="disabled", text="...")
+        self._set_status(key, "Connecting...", "#ccaa00")
         self.status_var.set(f"Connecting {key}...")
         thread = threading.Thread(target=lambda: self._service_login_worker(key), daemon=True)
         self._service_threads[key] = thread
@@ -274,16 +281,16 @@ class UsageMonitorApp:
             logging.error(f"[{key}] Login failed: {exc}", exc_info=True)
             self.root.after(0, lambda: self._after_service_login(key, None, str(exc)))
         finally:
-            # ボタンが "..." のままにならないようにする
-            def reset_button():
-                if self.service_login_btns[key].cget("text") == "...":
-                    self.service_login_btns[key].config(state="normal", text="Login")
-            self.root.after(0, reset_button)
+            def reset_if_stuck():
+                lbl = self.service_status_labels.get(key)
+                if lbl and lbl.cget("text") == "Connecting...":
+                    self._set_status(key, "Not logged in", "#666666")
+            self.root.after(0, reset_if_stuck)
 
     def _after_service_login(self, key: str, data: Any, error: str | None) -> None:
         """サービス個別ログイン完了後の処理"""
         if error:
-            self.service_login_btns[key].config(state="normal", text="Login")
+            self._set_status(key, "Login failed", "#cc4444")
             self.status_var.set(f"{key} login failed")
             if key == "windsurf":
                 for qtype in ["daily", "weekly"]:
@@ -298,8 +305,7 @@ class UsageMonitorApp:
         
         # ログイン成功 - まず状態とボタンを更新
         self.service_logged_in[key] = True
-        self.service_login_btns[key].pack_forget()
-        self._bind_panel_click(key)
+        self._set_status(key, "Active", "#44cc44")
         scraper = self.scrapers[key]
         scraper.prompt_login = False
         scraper.headless = True
@@ -370,10 +376,7 @@ class UsageMonitorApp:
             if "Session expired" in str(err):
                 self.service_logged_in[svc_key] = False
                 # そのサービスのLoginボタンを再表示
-                btn = self.service_login_btns.get(svc_key)
-                if btn:
-                    btn.config(state="normal", text="Login")
-                    btn.pack(side="right", pady=(0, 8))
+                self._set_status(svc_key, "Not logged in", "#666666")
         
         # ログイン中のサービスが1つもなければ Refresh 無効化
         if not any(self.service_logged_in.values()):

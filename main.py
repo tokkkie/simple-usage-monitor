@@ -110,7 +110,7 @@ class UsageMonitorApp:
         FG_GRAY = "#b0b0b0"
         
         self.root.title("Usage Monitor")
-        self.root.geometry("900x700")
+        self.root.geometry(self.config.get("window_size", "900x700"))
         self.root.resizable(True, True)
         self.root.minsize(600, 400)
         self.root.maxsize(1920, 1080)
@@ -126,8 +126,9 @@ class UsageMonitorApp:
         header.pack_propagate(False)
         
         title_label = tk.Label(header, text="Usage Monitor", font=("TkDefaultFont", 18, "bold"), 
-                              bg=BG_DARK, fg=FG_WHITE)
+                              bg=BG_DARK, fg=FG_WHITE, cursor="hand2")
         title_label.pack(side="left", padx=20, pady=10)
+        title_label.bind("<Button-1>", lambda e: self.open_settings())
         
         # ボタンを右側に配置
         button_frame = tk.Frame(header, bg=BG_DARK)
@@ -136,9 +137,6 @@ class UsageMonitorApp:
                                        bg="#444444", fg=FG_WHITE, font=("TkDefaultFont", 12, "bold"),
                                        relief="flat", padx=15, pady=5, state="disabled")
         self.refresh_button.pack(side="left", padx=5)
-        tk.Button(button_frame, text="SETTING", command=self.open_settings,
-                 bg="#444444", fg=FG_WHITE, font=("TkDefaultFont", 12, "bold"),
-                 relief="flat", padx=15, pady=5).pack(side="left", padx=5)
 
         # コンテンツエリア
         container = tk.Frame(self.root, bg=BG_DARK)
@@ -493,8 +491,8 @@ class UsageMonitorApp:
         
         dialog = tk.Toplevel(self.root)
         dialog.title("Settings")
-        dialog.geometry("540x400")
-        dialog.resizable(False, False)
+        dialog.geometry(self.config.get("settings_size", "540x460"))
+        dialog.resizable(True, True)
         dialog.config(bg=BG_DARK)
         
         frame = tk.Frame(dialog, bg=BG_DARK, padx=20, pady=20)
@@ -544,6 +542,25 @@ class UsageMonitorApp:
             service_vars[key] = var
             row += 1
         
+        # ウィンドウサイズ
+        label5 = tk.Label(frame, text="Main window size:", font=("TkDefaultFont", 14),
+                         bg=BG_DARK, fg=FG_WHITE)
+        label5.grid(row=row, column=0, sticky="w", pady=10)
+        window_size_var = tk.StringVar(value=self.config.get("window_size", "900x700"))
+        entry5 = tk.Entry(frame, textvariable=window_size_var, font=("TkDefaultFont", 14), width=12,
+                         bg=BG_SECTION, fg=FG_WHITE, insertbackground=FG_WHITE)
+        entry5.grid(row=row, column=1, sticky="w")
+        row += 1
+
+        label6 = tk.Label(frame, text="Settings window size:", font=("TkDefaultFont", 14),
+                         bg=BG_DARK, fg=FG_WHITE)
+        label6.grid(row=row, column=0, sticky="w", pady=10)
+        settings_size_var = tk.StringVar(value=self.config.get("settings_size", "540x460"))
+        entry6 = tk.Entry(frame, textvariable=settings_size_var, font=("TkDefaultFont", 14), width=12,
+                         bg=BG_SECTION, fg=FG_WHITE, insertbackground=FG_WHITE)
+        entry6.grid(row=row, column=1, sticky="w")
+        row += 1
+
         def save_settings():
             # 設定を更新
             self.config["refresh_interval"] = refresh_var.get()
@@ -551,6 +568,9 @@ class UsageMonitorApp:
             self.thresholds["windsurf_daily"] = daily_threshold_var.get()
             self.thresholds["windsurf_weekly"] = weekly_threshold_var.get()
             self.config["thresholds"] = self.thresholds
+            self.config["window_size"] = window_size_var.get()
+            self.config["settings_size"] = settings_size_var.get()
+            self.root.geometry(window_size_var.get())
             
             for key, var in service_vars.items():
                 if key in self.config["services"]:

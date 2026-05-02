@@ -95,7 +95,8 @@ class BaseScraper(ABC):
             try:
                 page = await self._get_page(context)
                 await self._ensure_login(context, page)
-                data = await self.scrape(page)
+                active_page = context.pages[-1] if context.pages else page
+                data = await self.scrape(active_page)
             finally:
                 await context.close()
         return data

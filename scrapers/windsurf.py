@@ -45,7 +45,11 @@ class WindsurfScraper(BaseScraper):
         return self._parse_usage_data(content)
 
     async def _is_authenticated(self, page: Page) -> bool:
-        return "Your daily quota" in (await page.content())
+        content = await page.content()
+        # ログイン状態の複数のシグナルをチェック
+        return ("Your daily quota" in content or 
+                "Your weekly quota" in content or
+                "subscription/usage" in (await page.url()))
 
     def _parse_usage_data(self, content: str) -> dict[str, Any]:
         daily = self._extract_quota_with_reset(content, "Your daily quota")

@@ -49,6 +49,12 @@ SCRAPER_FACTORIES = {
     "openrouter": OpenRouterScraper,
 }
 
+BG_DARK = "#1a1a1a"
+BG_SECTION = "#2a2a2a"
+BG_WARN = "#3a3a2a"
+FG_WHITE = "#ffffff"
+FG_GRAY = "#b0b0b0"
+
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "headless": False,
@@ -70,6 +76,11 @@ def load_config(path: Path) -> dict[str, Any]:
         return dict(DEFAULT_CONFIG)
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f)
+
+
+def save_config(config: dict[str, Any]) -> None:
+    with CONFIG_PATH.open("w", encoding="utf-8") as f:
+        yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
 
 
 class UsageMonitorApp:
@@ -118,21 +129,12 @@ class UsageMonitorApp:
         return scrapers
 
     def _build_ui(self) -> None:
-        # ダークテーマ色定義
-        BG_DARK = "#1a1a1a"
-        BG_SECTION = "#2a2a2a"
-        FG_WHITE = "#ffffff"
-        FG_GRAY = "#b0b0b0"
-        
         self.root.title("Usage Monitor")
-        self.root.geometry(self.config.get("window_size", "900x700"))
+        self.root.geometry(self.config.get("window_size", "500x520"))
         self.root.resizable(True, True)
         self.root.minsize(200, 200)
         self.root.config(bg=BG_DARK)
-        
-        # フォントサイズ
-        default_font = ("TkDefaultFont", 16)
-        self.root.option_add("*Font", default_font)
+        self.root.option_add("*Font", ("TkDefaultFont", 16))
 
         # ヘッダーバー（黒背景）
         header = tk.Frame(self.root, bg=BG_DARK, height=60)
@@ -157,112 +159,80 @@ class UsageMonitorApp:
         container.pack(fill="both", expand=True, padx=10, pady=10)
         
         self.status_var = tk.StringVar(value="")
-        self._status_label = tk.Label(container, textvariable=self.status_var, 
-                                     bg=BG_DARK, fg=FG_GRAY, font=("TkDefaultFont", 12))
-        self._status_label.pack(fill="x", pady=(0, 10))
+        tk.Label(container, textvariable=self.status_var,
+                 bg=BG_DARK, fg=FG_GRAY, font=("TkDefaultFont", 12)).pack(fill="x", pady=(0, 10))
+        ttk.Sizegrip(self.root).place(relx=1.0, rely=1.0, anchor="se")
 
-        grip = ttk.Sizegrip(self.root)
-        grip.place(relx=1.0, rely=1.0, anchor="se")
-
-        for key in self.scrapers.keys():
+        for key in self.scrapers:
             if key == "windsurf":
-                # Windsurf親フレーム
-                parent_frame = tk.Frame(container, bg=BG_SECTION, padx=15, pady=10)
-                parent_frame.pack(fill="x", pady=8)
-                self.service_parent_frames[key] = parent_frame
-                
-                title_row = tk.Frame(parent_frame, bg=BG_SECTION)
-                title_row.pack(fill="x", pady=(0, 8))
-                tk.Label(title_row, text="WindSurf", font=("TkDefaultFont", 16, "bold"),
-                        bg=BG_SECTION, fg=FG_WHITE).pack(side="left")
-                status_lbl = tk.Label(title_row, text="Not logged in",
-                                     font=("TkDefaultFont", 11), bg=BG_SECTION, fg="#666666")
-                status_lbl.pack(side="left", padx=(12, 0))
-                self.service_status_labels[key] = status_lbl
-                self.service_logged_in[key] = False
-                
-                # Daily/Weekly行
-                for quota_type in ["daily", "weekly"]:
-                    row_frame = tk.Frame(parent_frame, bg=BG_SECTION)
-                    row_frame.pack(fill="x", pady=4)
-                    
-                    label_text = quota_type.capitalize()
-                    label = tk.Label(row_frame, text=label_text, font=("TkDefaultFont", 13),
-                                    bg=BG_SECTION, fg=FG_GRAY, width=8, anchor="w")
-                    label.pack(side="left")
-                    
-                    percent_var = tk.StringVar(value="--")
-                    reset_var = tk.StringVar(value="--")
-                    
-                    reset_label = tk.Label(row_frame, textvariable=reset_var, font=("TkDefaultFont", 13),
-                                          bg=BG_SECTION, fg=FG_GRAY)
-                    reset_label.pack(side="right")
-
-                    data_label = tk.Label(row_frame, textvariable=percent_var, font=("TkDefaultFont", 14, "bold"),
-                                         bg=BG_SECTION, fg=FG_WHITE)
-                    data_label.pack(side="right", padx=(0, 12))
-                    
-                    error_var = tk.StringVar(value="")
-                    
-                    self.service_vars[f"windsurf_{quota_type}"] = {
-                        "error": error_var,
-                        "percent": percent_var,
-                        "reset": reset_var,
-                    }
-                    self.service_frames[f"windsurf_{quota_type}"] = row_frame
-                self._setup_panel_click(key)
+                self._build_windsurf_panel(container)
             else:
-                # OpenRouter親フレーム
-                parent_frame = tk.Frame(container, bg=BG_SECTION, padx=15, pady=10)
-                parent_frame.pack(fill="x", pady=8)
-                self.service_parent_frames[key] = parent_frame
-                
-                title_row = tk.Frame(parent_frame, bg=BG_SECTION)
-                title_row.pack(fill="x", pady=(0, 8))
-                tk.Label(title_row, text="OpenRouter", font=("TkDefaultFont", 16, "bold"),
-                        bg=BG_SECTION, fg=FG_WHITE).pack(side="left")
-                status_lbl = tk.Label(title_row, text="Not logged in",
-                                     font=("TkDefaultFont", 11), bg=BG_SECTION, fg="#666666")
-                status_lbl.pack(side="left", padx=(12, 0))
-                self.service_status_labels[key] = status_lbl
-                self.service_logged_in[key] = False
-                
-                error_var = tk.StringVar(value="")
-                
-                # Hour/Day メトリクス
-                req_1h_var = tk.StringVar(value="--")
-                tok_1h_var = tk.StringVar(value="--")
-                req_1d_var = tk.StringVar(value="--")
-                tok_1d_var = tk.StringVar(value="--")
-                
-                metrics = [
-                    ("Request / h", req_1h_var),
-                    ("Token / h", tok_1h_var),
-                    ("Request / d", req_1d_var),
-                    ("Token / d", tok_1d_var),
-                ]
-                
-                for metric_name, metric_var in metrics:
-                    row_frame = tk.Frame(parent_frame, bg=BG_SECTION)
-                    row_frame.pack(fill="x", pady=3)
-                    
-                    label = tk.Label(row_frame, text=metric_name, font=("TkDefaultFont", 13),
-                                    bg=BG_SECTION, fg=FG_GRAY, width=15, anchor="w")
-                    label.pack(side="left")
-                    
-                    value_label = tk.Label(row_frame, textvariable=metric_var, font=("TkDefaultFont", 14, "bold"),
-                                          bg=BG_SECTION, fg=FG_WHITE)
-                    value_label.pack(side="right")
-                
-                self.service_vars[key] = {
-                    "error": error_var,
-                    "req_1h": req_1h_var,
-                    "tok_1h": tok_1h_var,
-                    "req_1d": req_1d_var,
-                    "tok_1d": tok_1d_var,
-                }
-                self.service_frames[key] = parent_frame
-                self._setup_panel_click(key)
+                self._build_openrouter_panel(key, container)
+
+    def _build_windsurf_panel(self, container: tk.Frame) -> None:
+        key = "windsurf"
+        parent = tk.Frame(container, bg=BG_SECTION, padx=15, pady=10)
+        parent.pack(fill="x", pady=8)
+        self.service_parent_frames[key] = parent
+
+        title_row = tk.Frame(parent, bg=BG_SECTION)
+        title_row.pack(fill="x", pady=(0, 8))
+        tk.Label(title_row, text="WindSurf", font=("TkDefaultFont", 16, "bold"),
+                 bg=BG_SECTION, fg=FG_WHITE).pack(side="left")
+        status_lbl = tk.Label(title_row, text="Not logged in",
+                              font=("TkDefaultFont", 11), bg=BG_SECTION, fg="#666666")
+        status_lbl.pack(side="left", padx=(12, 0))
+        self.service_status_labels[key] = status_lbl
+        self.service_logged_in[key] = False
+
+        for quota_type in ("daily", "weekly"):
+            row = tk.Frame(parent, bg=BG_SECTION)
+            row.pack(fill="x", pady=4)
+            tk.Label(row, text=quota_type.capitalize(), font=("TkDefaultFont", 13),
+                     bg=BG_SECTION, fg=FG_GRAY, width=8, anchor="w").pack(side="left")
+            percent_var = tk.StringVar(value="--")
+            reset_var = tk.StringVar(value="--")
+            tk.Label(row, textvariable=reset_var, font=("TkDefaultFont", 13),
+                     bg=BG_SECTION, fg=FG_GRAY).pack(side="right")
+            tk.Label(row, textvariable=percent_var, font=("TkDefaultFont", 14, "bold"),
+                     bg=BG_SECTION, fg=FG_WHITE).pack(side="right", padx=(0, 12))
+            self.service_vars[f"windsurf_{quota_type}"] = {
+                "error": tk.StringVar(value=""), "percent": percent_var, "reset": reset_var,
+            }
+            self.service_frames[f"windsurf_{quota_type}"] = row
+        self._setup_panel_click(key)
+
+    def _build_openrouter_panel(self, key: str, container: tk.Frame) -> None:
+        parent = tk.Frame(container, bg=BG_SECTION, padx=15, pady=10)
+        parent.pack(fill="x", pady=8)
+        self.service_parent_frames[key] = parent
+
+        title_row = tk.Frame(parent, bg=BG_SECTION)
+        title_row.pack(fill="x", pady=(0, 8))
+        tk.Label(title_row, text="OpenRouter", font=("TkDefaultFont", 16, "bold"),
+                 bg=BG_SECTION, fg=FG_WHITE).pack(side="left")
+        status_lbl = tk.Label(title_row, text="Not logged in",
+                              font=("TkDefaultFont", 11), bg=BG_SECTION, fg="#666666")
+        status_lbl.pack(side="left", padx=(12, 0))
+        self.service_status_labels[key] = status_lbl
+        self.service_logged_in[key] = False
+
+        metric_vars: dict[str, tk.StringVar] = {}
+        for label_text, var_key in (
+            ("Request / h", "req_1h"), ("Token / h", "tok_1h"),
+            ("Request / d", "req_1d"), ("Token / d", "tok_1d"),
+        ):
+            var = tk.StringVar(value="--")
+            row = tk.Frame(parent, bg=BG_SECTION)
+            row.pack(fill="x", pady=3)
+            tk.Label(row, text=label_text, font=("TkDefaultFont", 13),
+                     bg=BG_SECTION, fg=FG_GRAY, width=15, anchor="w").pack(side="left")
+            tk.Label(row, textvariable=var, font=("TkDefaultFont", 14, "bold"),
+                     bg=BG_SECTION, fg=FG_WHITE).pack(side="right")
+            metric_vars[var_key] = var
+        self.service_vars[key] = {"error": tk.StringVar(value=""), **metric_vars}
+        self.service_frames[key] = parent
+        self._setup_panel_click(key)
 
     def _set_status(self, key: str, text: str, color: str) -> None:
         lbl = self.service_status_labels.get(key)
@@ -468,44 +438,24 @@ class UsageMonitorApp:
         vars_dict["req_1d"].set(str(one_d.get("requests", "--")))
         vars_dict["tok_1d"].set(str(one_d.get("tokens", "--")))
 
+    def _update_windsurf_quota(self, quota_type: str, data: dict) -> None:
+        percent = data.get("percent", 0)
+        vars_ = self.service_vars[f"windsurf_{quota_type}"]
+        vars_["error"].set("")
+        vars_["percent"].set(f"{percent}%")
+        vars_["reset"].set(data.get("reset", "--"))
+        threshold = self.thresholds.get(f"windsurf_{quota_type}", 30)
+        self.service_frames[f"windsurf_{quota_type}"].config(
+            bg=BG_WARN if percent <= threshold else BG_SECTION
+        )
+
     def _update_windsurf_display(self, data: dict[str, Any]) -> None:
-        """Windsurf専用の表示更新（daily/weeklyを個別に処理）"""
-        daily = data.get("daily")
-        weekly = data.get("weekly")
-        
-        if daily:
-            percent = daily.get("percent", 0)
-            reset = daily.get("reset", "--")
-            self.service_vars["windsurf_daily"]["error"].set("")
-            self.service_vars["windsurf_daily"]["percent"].set(f"{percent}%")
-            self.service_vars["windsurf_daily"]["reset"].set(reset)
-            # 閾値チェック
-            threshold = self.thresholds.get("windsurf_daily", 30)
-            if percent <= threshold:
-                self.service_frames["windsurf_daily"].config(bg="#3a3a2a")  # 暗いオレンジ
-            else:
-                self.service_frames["windsurf_daily"].config(bg="#2a2a2a")  # 通常
-        
-        if weekly:
-            percent = weekly.get("percent", 0)
-            reset = weekly.get("reset", "--")
-            self.service_vars["windsurf_weekly"]["error"].set("")
-            self.service_vars["windsurf_weekly"]["percent"].set(f"{percent}%")
-            self.service_vars["windsurf_weekly"]["reset"].set(reset)
-            # 閾値チェック
-            threshold = self.thresholds.get("windsurf_weekly", 20)
-            if percent <= threshold:
-                self.service_frames["windsurf_weekly"].config(bg="#3a3a2a")  # 暗いオレンジ
-            else:
-                self.service_frames["windsurf_weekly"].config(bg="#2a2a2a")  # 通常
+        for quota_type in ("daily", "weekly"):
+            if quota_data := data.get(quota_type):
+                self._update_windsurf_quota(quota_type, quota_data)
 
     def open_settings(self) -> None:
         """設定ダイアログを開く"""
-        BG_DARK = "#1a1a1a"
-        BG_SECTION = "#2a2a2a"
-        FG_WHITE = "#ffffff"
-        FG_GRAY = "#b0b0b0"
-        
         dialog = tk.Toplevel(self.root)
         dialog.title("Settings")
         dialog.geometry(self.config.get("settings_size", "540x460"))
@@ -514,8 +464,7 @@ class UsageMonitorApp:
 
         def on_dialog_close():
             self.config["settings_size"] = dialog.geometry().split("+")[0]
-            with CONFIG_PATH.open("w", encoding="utf-8") as f:
-                yaml.dump(self.config, f, default_flow_style=False, allow_unicode=True)
+            save_config(self.config)
             dialog.destroy()
 
         dialog.protocol("WM_DELETE_WINDOW", on_dialog_close)
@@ -585,10 +534,7 @@ class UsageMonitorApp:
                 if key in self.config["services"]:
                     self.config["services"][key]["enabled"] = var.get()
             
-            # config.yamlに保存
-            with CONFIG_PATH.open("w", encoding="utf-8") as f:
-                yaml.dump(self.config, f, default_flow_style=False, allow_unicode=True)
-            
+            save_config(self.config)
             dialog.destroy()
             self.status_var.set("Settings saved")
         
@@ -612,10 +558,8 @@ def main() -> None:
     UsageMonitorApp(root, config)
 
     def on_close():
-        # ウィンドウサイズを記録（"WxH+x+y" → "WxH" のみ保存）
         config["window_size"] = root.geometry().split("+")[0]
-        with CONFIG_PATH.open("w", encoding="utf-8") as f:
-            yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
+        save_config(config)
         PID_FILE.unlink(missing_ok=True)
         root.quit()
         root.destroy()

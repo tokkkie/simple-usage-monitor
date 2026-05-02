@@ -581,6 +581,10 @@ def main() -> None:
     UsageMonitorApp(root, config)
 
     def on_close():
+        # ウィンドウサイズを記録（"WxH+x+y" → "WxH" のみ保存）
+        config["window_size"] = root.geometry().split("+")[0]
+        with CONFIG_PATH.open("w", encoding="utf-8") as f:
+            yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
         PID_FILE.unlink(missing_ok=True)
         root.quit()
         root.destroy()

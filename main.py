@@ -505,6 +505,8 @@ class UsageMonitorApp:
         
         frame = tk.Frame(dialog, bg=BG_DARK, padx=20, pady=20)
         frame.pack(fill="both", expand=True)
+        frame.columnconfigure(0, weight=1)
+        frame.columnconfigure(1, weight=1)
         
         # 更新間隔
         label1 = tk.Label(frame, text="Refresh interval (minutes):", font=("TkDefaultFont", 14),
@@ -557,6 +559,7 @@ class UsageMonitorApp:
             self.thresholds["windsurf_daily"] = daily_threshold_var.get()
             self.thresholds["windsurf_weekly"] = weekly_threshold_var.get()
             self.config["thresholds"] = self.thresholds
+            self.config["settings_size"] = dialog.geometry().split("+")[0]
             
             for key, var in service_vars.items():
                 if key in self.config["services"]:

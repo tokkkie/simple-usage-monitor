@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import signal
 import sys
 import threading
+import time
 import tkinter as tk
 import webbrowser
 from pathlib import Path
@@ -27,7 +29,19 @@ else:
         filename="error.log",
     )
 
-CONFIG_PATH = Path(__file__).with_name("config.yaml")
+CONFIG_PATH = Path(__file__).parent / "config.yaml"
+PID_FILE = Path("/tmp/simple-usage-monitor.pid")
+
+
+def _ensure_single_instance() -> None:
+    if PID_FILE.exists():
+        try:
+            pid = int(PID_FILE.read_text().strip())
+            os.kill(pid, signal.SIGTERM)
+            time.sleep(0.5)
+        except (OSError, ValueError):
+            pass
+    PID_FILE.write_text(str(os.getpid()))
 
 
 SCRAPER_FACTORIES = {
@@ -563,11 +577,13 @@ class UsageMonitorApp:
 
 
 def main() -> None:
+    _ensure_single_instance()
     config = load_config(CONFIG_PATH)
     root = tk.Tk()
     UsageMonitorApp(root, config)
 
     def on_close():
+        PID_FILE.unlink(missing_ok=True)
         root.quit()
         root.destroy()
 

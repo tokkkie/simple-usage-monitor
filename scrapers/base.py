@@ -51,7 +51,11 @@ class BaseScraper(ABC):
         await page.goto(self.config.url, wait_until="domcontentloaded", timeout=30000)
         await page.wait_for_timeout(3000)  # SPAの描画完了を待つ
         
-        if await self._is_authenticated(page):
+        try:
+            already_auth = await self._is_authenticated(page)
+        except Exception:
+            already_auth = False
+        if already_auth:
             return
         if not self.prompt_login:
             raise RuntimeError(

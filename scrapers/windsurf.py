@@ -1,4 +1,4 @@
-"""Windsurf usage scraper."""
+"""Windsurf 利用状況スクレイパー。"""
 from __future__ import annotations
 
 import re
@@ -28,7 +28,10 @@ MONTH_MAP = {
 
 
 class WindsurfScraper(BaseScraper):
+    """Windsurf の daily/weekly クォータ使用率とリセット時刻を取得するスクレイパー。"""
+
     def __init__(self, session_dir: Path, headless: bool = False, prompt_login: bool = False) -> None:
+        """セッションディレクトリと起動オプションを受け取り初期化する。"""
         super().__init__(
             ScraperConfig(
                 name="Windsurf",
@@ -40,11 +43,13 @@ class WindsurfScraper(BaseScraper):
         )
 
     async def scrape(self, page: Page) -> Any:
+        """ページ本文を取得し、daily/weekly クォータデータを解析して返す。"""
         await page.wait_for_timeout(1000)
         content = await page.inner_text("body")
         return self._parse_usage_data(content)
 
     async def _is_authenticated(self, page: Page) -> bool:
+        """使用ページにクォータ情報が表示されているかを確認する。"""
         try:
             url = page.url
             if "subscription/usage" in url:
@@ -55,11 +60,13 @@ class WindsurfScraper(BaseScraper):
             return False
 
     def _parse_usage_data(self, content: str) -> dict[str, Any]:
+        """ページ本文から daily/weekly クォータデータを抽出して返す。"""
         daily = self._extract_quota_with_reset(content, "Your daily quota")
         weekly = self._extract_quota_with_reset(content, "Your weekly quota")
         return {"daily": daily, "weekly": weekly}
 
     def _extract_quota_with_reset(self, content: str, section_name: str) -> dict[str, Any] | None:
+        """指定セクションから残量％とリセット時刻を抽出して返す。"""
         lines = content.split("\n")
         start_idx = self._find_line_index(lines, section_name)
         if start_idx is None:
@@ -95,6 +102,7 @@ class WindsurfScraper(BaseScraper):
         return None
 
     def _format_relative_time(self, month_str: str, day_str: str, time_str: str) -> str:
+        """リセット日時を「resets in Xd Yh」形式の文字列に変換する。"""
         try:
             month = MONTH_MAP.get(month_str, 0)
             day = int(day_str)
@@ -127,12 +135,14 @@ class WindsurfScraper(BaseScraper):
             return "--"
 
     def _find_line_index(self, lines: list[str], pattern: str) -> int | None:
+        """行リストから指定文字列を含む行のインデックスを返す。"""
         for idx, line in enumerate(lines):
             if pattern in line:
                 return idx
         return None
 
     def _extract_nearby(self, lines: list[str], start_idx: int, max_offset: int, pattern: str):
+        """指定範囲内の行を正規表現で検索し、2グループ以上ならタプル、単一なら文字列で返す。"""
         for i in range(start_idx, min(start_idx + max_offset, len(lines))):
             match = re.search(pattern, lines[i])
             if match:

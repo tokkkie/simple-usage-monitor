@@ -1,4 +1,4 @@
-"""Base scraper utilities for Playwright-based usage fetchers."""
+"""Playwright ベースのスクレイパー共通基底クラス。"""
 from __future__ import annotations
 
 import asyncio
@@ -12,6 +12,7 @@ from playwright.async_api import BrowserContext, Page, async_playwright
 
 @dataclass
 class ScraperConfig:
+    """スクレイパーの接続先・セッション情報をまとめた設定データクラス。"""
     name: str
     url: str
     session_dir: Path
@@ -19,14 +20,16 @@ class ScraperConfig:
 
 
 class BaseScraper(ABC):
-    """Common Playwright handling shared by all scrapers."""
+    """全スクレイパーが継承する Playwright 操作の共通基底クラス。"""
 
     def __init__(self, config: ScraperConfig, prompt_login: bool = False) -> None:
+        """設定とログインプロンプトフラグを受け取り初期化する。"""
         self.config = config
         self.prompt_login = prompt_login
         self.headless = config.headless  # configとは独立して管理
 
     async def _launch_context(self, playwright) -> BrowserContext:
+        """永続セッション付きの Chromium コンテキストを起動して返す。"""
         return await playwright.chromium.launch_persistent_context(
             user_data_dir=str(self.config.session_dir),
             headless=self.headless,  # self.headlessで制御
@@ -45,9 +48,11 @@ class BaseScraper(ABC):
         )
 
     async def _get_page(self, context: BrowserContext) -> Page:
+        """コンテキストの最初のページを返す。なければ新規ページを開く。"""
         return context.pages[0] if context.pages else await context.new_page()
 
     async def _ensure_login(self, context: BrowserContext, page: Page) -> None:
+        """認証済みならそのまま返す。未認証なら最大300秒ログイン完了を待機する。"""
         await page.goto(self.config.url, wait_until="domcontentloaded", timeout=30000)
         await page.wait_for_timeout(3000)  # SPAの描画完了を待つ
         
@@ -90,6 +95,7 @@ class BaseScraper(ABC):
         raise RuntimeError(f"[{self.config.name}] Login timeout. Please try again.")
 
     async def run(self, login_only: bool = False) -> Any:
+        """ブラウザを起動してログイン確認・スクレイピングを実行し結果を返す。login_only=True ならログイン後すぐに閉じる。"""
         async with async_playwright() as playwright:
             context = await self._launch_context(playwright)
             try:
@@ -105,10 +111,10 @@ class BaseScraper(ABC):
 
     @abstractmethod
     async def _is_authenticated(self, page: Page) -> bool:
-        """Return True if the target dashboard appears without manual login."""
+        """ログイン済み（ダッシュボードが表示されている）なら True を返す。"""
         raise NotImplementedError
 
     @abstractmethod
     async def scrape(self, page: Page) -> Any:
-        """Return structured data extracted from the page."""
+        """ページから必要なデータを抽出して構造化データとして返す。"""
         raise NotImplementedError

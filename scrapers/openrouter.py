@@ -1,4 +1,4 @@
-"""OpenRouter usage scraper."""
+"""OpenRouter 利用状況スクレイパー。"""
 from __future__ import annotations
 
 import re
@@ -11,7 +11,10 @@ from .base import BaseScraper, ScraperConfig
 
 
 class OpenRouterScraper(BaseScraper):
+    """OpenRouter の requests/tokens メトリクス（1h/1d）を取得するスクレイパー。"""
+
     def __init__(self, session_dir: Path, headless: bool = False, prompt_login: bool = False) -> None:
+        """セッションディレクトリと起動オプションを受け取り初期化する。"""
         super().__init__(
             ScraperConfig(
                 name="OpenRouter",
@@ -23,6 +26,7 @@ class OpenRouterScraper(BaseScraper):
         )
 
     async def scrape(self, page: Page) -> Any:
+        """期間ドロップダウンを操作して1h/1d の requests/tokens を取得して返す。"""
         # ページは既に _ensure_login() で読み込み済み
         await page.wait_for_timeout(2000)  # SPAの描画待ち
         
@@ -63,9 +67,11 @@ class OpenRouterScraper(BaseScraper):
         }
 
     async def _is_authenticated(self, page: Page) -> bool:
+        """使用量ダッシュボードのテキストが存在するかでログイン済みを判定する。"""
         return "Your usage across models" in (await page.inner_text("body"))
 
     async def _capture_period(self, page: Page, target: str, current: str) -> str:
+        """ドロップダウンで期間を target に切り替え、更新後のページ本文を返す。"""
         dropdown_button = await self._find_dropdown_button(page, current)
         if dropdown_button is None:
             raise RuntimeError(f"[{self.config.name}] Failed to find dropdown button: {current}")
@@ -91,7 +97,7 @@ class OpenRouterScraper(BaseScraper):
         return await page.inner_text("body")
 
     async def _get_current_period(self, page: Page) -> str | None:
-        """現在選択されている期間を取得"""
+        """現在ドロップダウンで選択されている期間ラベルを返す。"""
         buttons = await page.query_selector_all("button")
         period_candidates = ["1 Hour", "1 Day", "1 Week", "1 Month", "All Time"]
         for btn in buttons:
@@ -104,6 +110,7 @@ class OpenRouterScraper(BaseScraper):
         return None
 
     async def _find_dropdown_button(self, page: Page, current: str):
+        """ページ内のボタンから指定ラベルのドロップダウンボタンを探して返す。"""
         buttons = await page.query_selector_all("button")
         for btn in buttons:
             try:
@@ -115,6 +122,7 @@ class OpenRouterScraper(BaseScraper):
         return None
 
     def _parse_metrics(self, content: str) -> dict[str, Any | None]:
+        """ページ本文から requests/tokens の値を抽出して返す。"""
         lines = content.split("\n")
         return {
             "requests": self._extract_metric(lines, "Requests"),
@@ -122,6 +130,7 @@ class OpenRouterScraper(BaseScraper):
         }
 
     def _extract_metric(self, lines: list[str], name: str) -> str | None:
+        """メトリクス名の次の行から数値（K/M小数記法対応）を抽出して返す。"""
         idx = self._find_line_index(lines, name)
         if idx is None or idx + 1 >= len(lines):
             return None
@@ -129,6 +138,7 @@ class OpenRouterScraper(BaseScraper):
         return match.group(0) if match else None
 
     def _find_line_index(self, lines: list[str], pattern: str) -> int | None:
+        """行リストから指定文字列を含む行のインデックスを返す。"""
         for i, line in enumerate(lines):
             if pattern in line:
                 return i

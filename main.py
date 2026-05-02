@@ -494,6 +494,14 @@ class UsageMonitorApp:
         dialog.geometry(self.config.get("settings_size", "540x460"))
         dialog.resizable(True, True)
         dialog.config(bg=BG_DARK)
+
+        def on_dialog_close():
+            self.config["settings_size"] = dialog.geometry().split("+")[0]
+            with CONFIG_PATH.open("w", encoding="utf-8") as f:
+                yaml.dump(self.config, f, default_flow_style=False, allow_unicode=True)
+            dialog.destroy()
+
+        dialog.protocol("WM_DELETE_WINDOW", on_dialog_close)
         
         frame = tk.Frame(dialog, bg=BG_DARK, padx=20, pady=20)
         frame.pack(fill="both", expand=True)

@@ -121,8 +121,8 @@ class WindsurfScraper(BaseScraper):
             days = hours // 24
             remaining_hours = hours % 24
             if days > 0:
-                return f"{days}d {remaining_hours}h"
-            return f"{hours}h"
+                return f"resets in {days}d {remaining_hours}h"
+            return f"resets in {hours}h"
         except Exception:
             return "--"
 

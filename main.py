@@ -179,13 +179,13 @@ class UsageMonitorApp:
                     percent_var = tk.StringVar(value="--")
                     reset_var = tk.StringVar(value="--")
                     
-                    data_label = tk.Label(row_frame, textvariable=percent_var, font=("TkDefaultFont", 14, "bold"),
-                                         bg=BG_SECTION, fg=FG_WHITE)
-                    data_label.pack(side="left", padx=(20, 0))
-                    
                     reset_label = tk.Label(row_frame, textvariable=reset_var, font=("TkDefaultFont", 13),
                                           bg=BG_SECTION, fg=FG_GRAY)
-                    reset_label.pack(side="left", padx=(20, 0))
+                    reset_label.pack(side="right")
+
+                    data_label = tk.Label(row_frame, textvariable=percent_var, font=("TkDefaultFont", 14, "bold"),
+                                         bg=BG_SECTION, fg=FG_WHITE)
+                    data_label.pack(side="right", padx=(0, 12))
                     
                     error_var = tk.StringVar(value="")
                     
@@ -237,7 +237,7 @@ class UsageMonitorApp:
                     
                     value_label = tk.Label(row_frame, textvariable=metric_var, font=("TkDefaultFont", 14, "bold"),
                                           bg=BG_SECTION, fg=FG_WHITE)
-                    value_label.pack(side="left", padx=(20, 0))
+                    value_label.pack(side="right")
                 
                 self.service_vars[key] = {
                     "error": error_var,

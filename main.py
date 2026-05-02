@@ -147,6 +147,9 @@ class UsageMonitorApp:
                                      bg=BG_DARK, fg=FG_GRAY, font=("TkDefaultFont", 12))
         self._status_label.pack(fill="x", pady=(0, 10))
 
+        grip = ttk.Sizegrip(self.root)
+        grip.place(relx=1.0, rely=1.0, anchor="se")
+
         for key in self.scrapers.keys():
             if key == "windsurf":
                 # Windsurf親フレーム
@@ -503,6 +506,9 @@ class UsageMonitorApp:
 
         dialog.protocol("WM_DELETE_WINDOW", on_dialog_close)
         
+        grip = ttk.Sizegrip(dialog)
+        grip.place(relx=1.0, rely=1.0, anchor="se")
+
         frame = tk.Frame(dialog, bg=BG_DARK, padx=20, pady=20)
         frame.pack(fill="both", expand=True)
         frame.columnconfigure(0, weight=1)

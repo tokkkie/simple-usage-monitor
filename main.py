@@ -112,8 +112,7 @@ class UsageMonitorApp:
         self.root.title("Usage Monitor")
         self.root.geometry(self.config.get("window_size", "900x700"))
         self.root.resizable(True, True)
-        self.root.minsize(600, 400)
-        self.root.maxsize(1920, 1080)
+        self.root.minsize(200, 200)
         self.root.config(bg=BG_DARK)
         
         # フォントサイズ

@@ -62,9 +62,9 @@ class BaseScraper(ABC):
                 f"[{self.config.name}] Session expired. Please click 'Login' button again."
             )
         
-        # ログイン完了を自動検出（最大120秒待機）
+        # ログイン完了を自動検出（最大300秒待機）
         print(f"[{self.config.name}] Waiting for login... (browser window opened)")
-        max_wait = 120
+        max_wait = 300
         for i in range(max_wait):
             await asyncio.sleep(1)
             try:

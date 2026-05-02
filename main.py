@@ -6,6 +6,7 @@ import logging
 import sys
 import threading
 import tkinter as tk
+import webbrowser
 from pathlib import Path
 from tkinter import ttk
 from typing import Any
@@ -50,7 +51,8 @@ class UsageMonitorApp:
         self.scrapers = self._build_scrapers()
         self.service_vars: dict[str, dict[str, tk.StringVar]] = {}
         self.service_frames: dict[str, tk.Widget] = {}  # 背景色変更用
-        self.service_login_btns: dict[str, ttk.Button] = {}  # サービス別ログインボタン
+        self.service_parent_frames: dict[str, tk.Frame] = {}  # クリック領域
+        self.service_login_btns: dict[str, tk.Button] = {}  # サービス別ログインボタン
         self.service_logged_in: dict[str, bool] = {}  # サービス別ログイン状態
         self._service_threads: dict[str, threading.Thread] = {}  # サービス別スレッド
         self._refresh_thread: threading.Thread | None = None
@@ -137,6 +139,7 @@ class UsageMonitorApp:
                 # Windsurf親フレーム
                 parent_frame = tk.Frame(container, bg=BG_SECTION, padx=15, pady=10)
                 parent_frame.pack(fill="x", pady=8)
+                self.service_parent_frames[key] = parent_frame
                 
                 title_label = tk.Label(parent_frame, text="WindSurf", font=("TkDefaultFont", 16, "bold"),
                                       bg=BG_SECTION, fg=FG_WHITE)
@@ -182,6 +185,7 @@ class UsageMonitorApp:
                 # OpenRouter親フレーム
                 parent_frame = tk.Frame(container, bg=BG_SECTION, padx=15, pady=10)
                 parent_frame.pack(fill="x", pady=8)
+                self.service_parent_frames[key] = parent_frame
                 
                 title_label = tk.Label(parent_frame, text="OpenRouter", font=("TkDefaultFont", 16, "bold"),
                                       bg=BG_SECTION, fg=FG_WHITE)
@@ -229,6 +233,20 @@ class UsageMonitorApp:
                     "tok_1d": tok_1d_var,
                 }
                 self.service_frames[key] = parent_frame
+
+    def _bind_panel_click(self, key: str) -> None:
+        url = self.config["services"][key]["url"]
+        def open_url(e, u=url):
+            webbrowser.open(u)
+        def bind_recursive(widget):
+            try:
+                widget.bind("<Button-1>", open_url)
+                widget.config(cursor="hand2")
+            except Exception:
+                pass
+            for child in widget.winfo_children():
+                bind_recursive(child)
+        bind_recursive(self.service_parent_frames[key])
 
     def login_service(self, key: str) -> None:
         """サービス個別のログイン処理"""
@@ -280,7 +298,8 @@ class UsageMonitorApp:
         
         # ログイン成功 - まず状態とボタンを更新
         self.service_logged_in[key] = True
-        self.service_login_btns[key].config(state="disabled", text="Logged in")
+        self.service_login_btns[key].pack_forget()
+        self._bind_panel_click(key)
         scraper = self.scrapers[key]
         scraper.prompt_login = False
         scraper.headless = True
@@ -354,6 +373,7 @@ class UsageMonitorApp:
                 btn = self.service_login_btns.get(svc_key)
                 if btn:
                     btn.config(state="normal", text="Login")
+                    btn.pack(side="right", pady=(0, 8))
         
         # ログイン中のサービスが1つもなければ Refresh 無効化
         if not any(self.service_logged_in.values()):

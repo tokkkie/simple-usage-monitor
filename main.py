@@ -255,6 +255,12 @@ class UsageMonitorApp:
         except Exception as exc:
             logging.error(f"[{key}] Login failed: {exc}", exc_info=True)
             self.root.after(0, lambda: self._after_service_login(key, None, str(exc)))
+        finally:
+            # ボタンが "..." のままにならないようにする
+            def reset_button():
+                if self.service_login_btns[key].cget("text") == "...":
+                    self.service_login_btns[key].config(state="normal", text="Login")
+            self.root.after(0, reset_button)
 
     def _after_service_login(self, key: str, data: Any, error: str | None) -> None:
         """サービス個別ログイン完了後の処理"""

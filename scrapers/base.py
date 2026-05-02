@@ -51,19 +51,24 @@ class BaseScraper(ABC):
         await page.goto(self.config.url, wait_until="domcontentloaded", timeout=30000)
         await page.wait_for_timeout(3000)  # SPAの描画完了を待つ
         
-        if await self._is_authenticated(page):
+        try:
+            already_auth = await self._is_authenticated(page)
+        except Exception:
+            already_auth = False
+        if already_auth:
             return
         if not self.prompt_login:
             raise RuntimeError(
                 f"[{self.config.name}] Session expired. Please click 'Login' button again."
             )
         
-        # ログイン完了を自動検出（最大120秒待機）
+        # ログイン完了を自動検出（最大300秒待機）
         print(f"[{self.config.name}] Waiting for login... (browser window opened)")
-        max_wait = 120
-        for _ in range(max_wait):
+        max_wait = 300
+        for i in range(max_wait):
             await asyncio.sleep(1)
             try:
+                # 最新のページを取得（新しいタブが開かれた場合に対応）
                 current_page = context.pages[-1] if context.pages else page
                 # 5秒でタイムアウトするように制限
                 authenticated = await asyncio.wait_for(
@@ -72,21 +77,28 @@ class BaseScraper(ABC):
                 )
                 if authenticated:
                     print(f"[{self.config.name}] Login detected!")
+                    # ページ遷移完了を待つ
+                    await asyncio.sleep(1)
                     return
             except asyncio.TimeoutError:
                 pass  # 認証チェックがタイムアウト→次のループへ
-            except Exception:
-                pass  # ページ遷移中などの一時的エラー→次のループへ
+            except Exception as e:
+                # ページ遷移中などの一時的エラーをログ出力
+                if i % 10 == 0:  # 10秒ごとにログ出力
+                    print(f"[{self.config.name}] Waiting... ({i}s)")
         
         raise RuntimeError(f"[{self.config.name}] Login timeout. Please try again.")
 
-    async def run(self) -> Any:
+    async def run(self, login_only: bool = False) -> Any:
         async with async_playwright() as playwright:
             context = await self._launch_context(playwright)
             try:
                 page = await self._get_page(context)
                 await self._ensure_login(context, page)
-                data = await self.scrape(page)
+                if login_only:
+                    return None
+                active_page = context.pages[-1] if context.pages else page
+                data = await self.scrape(active_page)
             finally:
                 await context.close()
         return data

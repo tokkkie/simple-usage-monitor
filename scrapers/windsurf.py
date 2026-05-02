@@ -45,7 +45,14 @@ class WindsurfScraper(BaseScraper):
         return self._parse_usage_data(content)
 
     async def _is_authenticated(self, page: Page) -> bool:
-        return "Your daily quota" in (await page.content())
+        try:
+            url = page.url
+            if "subscription/usage" in url:
+                content = await page.inner_text("body")
+                return "daily quota" in content or "weekly quota" in content
+            return False
+        except Exception:
+            return False
 
     def _parse_usage_data(self, content: str) -> dict[str, Any]:
         daily = self._extract_quota_with_reset(content, "Your daily quota")
@@ -114,8 +121,8 @@ class WindsurfScraper(BaseScraper):
             days = hours // 24
             remaining_hours = hours % 24
             if days > 0:
-                return f"{days}d {remaining_hours}h"
-            return f"{hours}h"
+                return f"resets in {days}d {remaining_hours}h"
+            return f"resets in {hours}h"
         except Exception:
             return "--"
 

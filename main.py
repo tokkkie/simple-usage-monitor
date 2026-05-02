@@ -50,9 +50,24 @@ SCRAPER_FACTORIES = {
 }
 
 
+DEFAULT_CONFIG: dict[str, Any] = {
+    "headless": False,
+    "refresh_interval": 10,
+    "window_size": "500x520",
+    "settings_size": "504x359",
+    "services": {
+        "windsurf": {"enabled": True, "url": "https://windsurf.com/subscription/usage"},
+        "openrouter": {"enabled": True, "url": "https://openrouter.ai/activity"},
+    },
+    "thresholds": {"windsurf_daily": 30, "windsurf_weekly": 20},
+}
+
+
 def load_config(path: Path) -> dict[str, Any]:
     if not path.exists():
-        raise FileNotFoundError(f"Config file not found: {path}")
+        with path.open("w", encoding="utf-8") as f:
+            yaml.dump(DEFAULT_CONFIG, f, default_flow_style=False, allow_unicode=True)
+        return dict(DEFAULT_CONFIG)
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 

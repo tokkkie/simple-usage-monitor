@@ -4,6 +4,7 @@ __pycache__/
 
 *.log
 sessions/
+config.yaml
 
 .vscode/
 .idea/

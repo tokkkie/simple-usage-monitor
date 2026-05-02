@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import signal
 import sys
 import threading
 import tkinter as tk
@@ -565,7 +566,24 @@ def main() -> None:
     config = load_config(CONFIG_PATH)
     root = tk.Tk()
     UsageMonitorApp(root, config)
-    root.mainloop()
+
+    def on_close():
+        root.quit()
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", on_close)
+    signal.signal(signal.SIGINT, lambda *_: root.after(0, on_close))
+
+    # mainloop()はC実装のためPythonのシグナルをチェックしない
+    # 定期的にPythonに制御を戻してSIGINTを処理可能にする
+    def _poll():
+        root.after(200, _poll)
+    root.after(200, _poll)
+
+    try:
+        root.mainloop()
+    except KeyboardInterrupt:
+        on_close()
 
 
 if __name__ == "__main__":

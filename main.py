@@ -542,25 +542,6 @@ class UsageMonitorApp:
             service_vars[key] = var
             row += 1
         
-        # ウィンドウサイズ
-        label5 = tk.Label(frame, text="Main window size:", font=("TkDefaultFont", 14),
-                         bg=BG_DARK, fg=FG_WHITE)
-        label5.grid(row=row, column=0, sticky="w", pady=10)
-        window_size_var = tk.StringVar(value=self.config.get("window_size", "900x700"))
-        entry5 = tk.Entry(frame, textvariable=window_size_var, font=("TkDefaultFont", 14), width=12,
-                         bg=BG_SECTION, fg=FG_WHITE, insertbackground=FG_WHITE)
-        entry5.grid(row=row, column=1, sticky="w")
-        row += 1
-
-        label6 = tk.Label(frame, text="Settings window size:", font=("TkDefaultFont", 14),
-                         bg=BG_DARK, fg=FG_WHITE)
-        label6.grid(row=row, column=0, sticky="w", pady=10)
-        settings_size_var = tk.StringVar(value=self.config.get("settings_size", "540x460"))
-        entry6 = tk.Entry(frame, textvariable=settings_size_var, font=("TkDefaultFont", 14), width=12,
-                         bg=BG_SECTION, fg=FG_WHITE, insertbackground=FG_WHITE)
-        entry6.grid(row=row, column=1, sticky="w")
-        row += 1
-
         def save_settings():
             # 設定を更新
             self.config["refresh_interval"] = refresh_var.get()
@@ -568,9 +549,6 @@ class UsageMonitorApp:
             self.thresholds["windsurf_daily"] = daily_threshold_var.get()
             self.thresholds["windsurf_weekly"] = weekly_threshold_var.get()
             self.config["thresholds"] = self.thresholds
-            self.config["window_size"] = window_size_var.get()
-            self.config["settings_size"] = settings_size_var.get()
-            self.root.geometry(window_size_var.get())
             
             for key, var in service_vars.items():
                 if key in self.config["services"]:

@@ -2,6 +2,8 @@
 
 Tkinter GUI + Playwright scraper for monitoring Windsurf and OpenRouter usage.
 
+![Screenshot](docs/screenshot.png)
+
 ## Requirements
 
 - Python 3.12+

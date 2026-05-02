@@ -2,6 +2,8 @@
 
 Windsurf / OpenRouter の使用量をモニタリングする Tkinter + Playwright アプリ。
 
+![Screenshot](docs/screenshot.png)
+
 ## 必要要件
 
 - Python 3.12+

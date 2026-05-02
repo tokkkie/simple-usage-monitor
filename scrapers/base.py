@@ -89,12 +89,14 @@ class BaseScraper(ABC):
         
         raise RuntimeError(f"[{self.config.name}] Login timeout. Please try again.")
 
-    async def run(self) -> Any:
+    async def run(self, login_only: bool = False) -> Any:
         async with async_playwright() as playwright:
             context = await self._launch_context(playwright)
             try:
                 page = await self._get_page(context)
                 await self._ensure_login(context, page)
+                if login_only:
+                    return None
                 active_page = context.pages[-1] if context.pages else page
                 data = await self.scrape(active_page)
             finally:

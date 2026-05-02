@@ -142,10 +142,10 @@ class UsageMonitorApp:
                                       bg=BG_SECTION, fg=FG_WHITE)
                 title_label.pack(anchor="w", pady=(0, 8))
                 
-                login_btn = tk.Button(parent_frame, text="要ログイン", command=lambda k=key: self.login_service(k),
+                login_btn = tk.Button(parent_frame, text="Login", command=lambda k=key: self.login_service(k),
                                      bg="#444444", fg=FG_WHITE, font=("TkDefaultFont", 10),
                                      relief="flat", padx=10, pady=3)
-                login_btn.place(in_=parent_frame, relx=1.0, x=-10, y=5, anchor="ne")
+                login_btn.pack(side="right", pady=(0, 8))
                 self.service_login_btns[key] = login_btn
                 self.service_logged_in[key] = False
                 
@@ -187,10 +187,10 @@ class UsageMonitorApp:
                                       bg=BG_SECTION, fg=FG_WHITE)
                 title_label.pack(anchor="w", pady=(0, 8))
                 
-                login_btn = tk.Button(parent_frame, text="要ログイン", command=lambda k=key: self.login_service(k),
+                login_btn = tk.Button(parent_frame, text="Login", command=lambda k=key: self.login_service(k),
                                      bg="#444444", fg=FG_WHITE, font=("TkDefaultFont", 10),
                                      relief="flat", padx=10, pady=3)
-                login_btn.place(in_=parent_frame, relx=1.0, x=-10, y=5, anchor="ne")
+                login_btn.pack(side="right", pady=(0, 8))
                 self.service_login_btns[key] = login_btn
                 self.service_logged_in[key] = False
                 
@@ -274,7 +274,7 @@ class UsageMonitorApp:
         
         # ログイン成功 - まず状態とボタンを更新
         self.service_logged_in[key] = True
-        self.service_login_btns[key].pack_forget()
+        self.service_login_btns[key].config(state="disabled", text="Logged in")
         scraper = self.scrapers[key]
         scraper.prompt_login = False
         scraper.headless = True
@@ -348,7 +348,6 @@ class UsageMonitorApp:
                 btn = self.service_login_btns.get(svc_key)
                 if btn:
                     btn.config(state="normal", text="Login")
-                    btn.pack(side="right")
         
         # ログイン中のサービスが1つもなければ Refresh 無効化
         if not any(self.service_logged_in.values()):

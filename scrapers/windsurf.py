@@ -44,7 +44,11 @@ class WindsurfScraper(BaseScraper):
 
     async def scrape(self, page: Page) -> Any:
         """ページ本文を取得し、daily/weekly クォータデータを解析して返す。"""
-        await page.wait_for_timeout(1000)
+        await page.wait_for_timeout(3000)
+        try:
+            await page.wait_for_selector("text=/daily quota|weekly quota/i", timeout=10000)
+        except Exception:
+            pass
         content = await page.inner_text("body")
         return self._parse_usage_data(content)
 
@@ -88,12 +92,25 @@ class WindsurfScraper(BaseScraper):
                     break
 
         reset = "--"
+        # Try English format: "Resets May 9, 5:00 PM"
         reset_match = self._extract_nearby(
             lines,
             start_idx + 1,
             min(15, end_idx - start_idx),
             r"Resets\s+(\w+)\s+(\d+),\s+(\d+:\d+\s*(?:AM|PM))",
         )
+        
+        # Try Japanese format: "Resets 5月9日 17:00 JST"
+        if not reset_match:
+            reset_match_jp = self._extract_nearby(
+                lines,
+                start_idx + 1,
+                min(15, end_idx - start_idx),
+                r"Resets\s+(\d+)月(\d+)日\s+(\d+:\d+)",
+            )
+            if reset_match_jp and isinstance(reset_match_jp, tuple) and len(reset_match_jp) == 3:
+                reset = self._format_relative_time_jp(*reset_match_jp)
+        
         if reset_match and isinstance(reset_match, tuple) and len(reset_match) == 3:
             reset = self._format_relative_time(*reset_match)
 
@@ -101,8 +118,36 @@ class WindsurfScraper(BaseScraper):
             return {"percent": percent, "reset": reset}
         return None
 
+    def _format_relative_time_jp(self, month_str: str, day_str: str, time_str: str) -> str:
+        """日本語形式のリセット日時を「resets in Xd Yh」形式に変換する。"""
+        try:
+            month = int(month_str)
+            day = int(day_str)
+            time_match = re.match(r"(\d+):(\d+)", time_str)
+            if time_match:
+                hour = int(time_match.group(1))
+                minute = int(time_match.group(2))
+            else:
+                hour = minute = 0
+
+            now = datetime.now()
+            year = now.year
+            reset_dt = datetime(year, month, day, hour, minute)
+            if reset_dt < now:
+                reset_dt = datetime(year + 1, month, day, hour, minute)
+
+            diff = reset_dt - now
+            hours = int(diff.total_seconds() // 3600)
+            days = hours // 24
+            remaining_hours = hours % 24
+            if days > 0:
+                return f"resets in {days}d {remaining_hours}h"
+            return f"resets in {hours}h"
+        except Exception:
+            return "--"
+
     def _format_relative_time(self, month_str: str, day_str: str, time_str: str) -> str:
-        """リセット日時を「resets in Xd Yh」形式の文字列に変換する。"""
+        """英語形式のリセット日時を「resets in Xd Yh」形式に変換する。"""
         try:
             month = MONTH_MAP.get(month_str, 0)
             day = int(day_str)

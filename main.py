@@ -290,7 +290,8 @@ class UsageMonitorApp:
             self.root.after(0, lambda: self._after_service_login(key, data, None))
         except Exception as exc:
             logging.error(f"[{key}] Login failed: {exc}", exc_info=True)
-            self.root.after(0, lambda: self._after_service_login(key, None, str(exc)))
+            error_msg = str(exc)
+            self.root.after(0, lambda: self._after_service_login(key, None, error_msg))
         finally:
             def reset_if_stuck():
                 lbl = self.service_status_labels.get(key)

@@ -40,7 +40,6 @@ chmod +x .githooks/pre-commit .githooks/pre-push .githooks/commit-msg .githooks/
 |---|---|
 | Linux | `curl -sSL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_linux_x64.tar.gz \| tar -xz gitleaks && sudo mv gitleaks /usr/local/bin/` |
 | macOS | `brew install gitleaks` |
-| WSL | Linux と同じ手順を WSL シェル内で実行 |
 
 詳細は公式: <https://github.com/gitleaks/gitleaks#installing>
 

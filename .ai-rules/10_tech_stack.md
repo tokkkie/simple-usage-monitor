@@ -1,8 +1,7 @@
 # 10_tech_stack.md
 
 ## 1. 実行環境
-- **OS**: WSL (Windows Subsystem for Linux)
-- **Git実行**: PowerShell 等の解析問題を避けるため、git コマンドは `wsl bash -c "cd ./ && <command>"` またはプロジェクトルートから直接実行すること。
+- **OS**: Linux
 - **権限**: `sudo` を必要とする操作は行わず、ユーザーに指示を求めること。
 
 ## 2. 基本ディレクトリ構造

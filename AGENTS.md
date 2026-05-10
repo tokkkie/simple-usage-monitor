@@ -4,7 +4,7 @@
 
 ## 1. Core Rules (SSOT)
 - [00_identity.md](./.ai-rules/00_identity.md) : 事実至上主義・感情排除・最小コンテキスト。
-- [10_tech_stack.md](./.ai-rules/10_tech_stack.md) : WSL環境制約・ディレクトリ構造。
+- [10_tech_stack.md](./.ai-rules/10_tech_stack.md) : 実行環境・ディレクトリ構造。
 - [20_coding.md](./.ai-rules/20_coding.md) : コード規約・秘匿情報禁止・最小差分。
 - [30_git.md](./.ai-rules/30_git.md) : コミット規約・PRバリデーション。
 

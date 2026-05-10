@@ -10,8 +10,6 @@
 
 ## 2. Tool-Specific Integration
 各ツールは以下の設定を通じて上記規約を読み込むこと。
-- **Cursor**: `.cursorrules`
-- **Roo Code**: `.roo/rules/`
 - **Continue**: `.continuerc.json`
 - **Windsurf**: `.windsurfrules`
 

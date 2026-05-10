@@ -82,8 +82,12 @@ class BaseScraper(ABC):
                 )
                 if authenticated:
                     print(f"[{self.config.name}] Login detected!")
-                    # ページ遷移完了を待つ
-                    await asyncio.sleep(1)
+                    # ページ遷移とレンダリング完了を待つ
+                    await asyncio.sleep(2)
+                    # 目的のURLに明示的に遷移
+                    if current_page.url != self.config.url:
+                        await current_page.goto(self.config.url, wait_until="domcontentloaded", timeout=15000)
+                        await asyncio.sleep(2)
                     return
             except asyncio.TimeoutError:
                 pass  # 認証チェックがタイムアウト→次のループへ

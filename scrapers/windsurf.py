@@ -56,10 +56,20 @@ class WindsurfScraper(BaseScraper):
         """使用ページにクォータ情報が表示されているかを確認する。"""
         try:
             url = page.url
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+            content = await page.inner_text("body", timeout=5000)
+            
+            # subscription/usage ページならクォータ情報で判定
             if "subscription/usage" in url:
-                content = await page.inner_text("body")
-                return "daily quota" in content or "weekly quota" in content
-            return False
+                return "daily quota" in content.lower() or "weekly quota" in content.lower()
+            
+            # ログイン後のリダイレクト先（ダッシュボード等）でも認証済みと判定
+            # ログインページやエラーページでないことを確認
+            if any(keyword in url.lower() for keyword in ["login", "signin", "auth", "error"]):
+                return False
+            
+            # windsurf.com ドメイン内で、ログインページでなければ認証済みと判定
+            return "windsurf.com" in url.lower()
         except Exception:
             return False
 

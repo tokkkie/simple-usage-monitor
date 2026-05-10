@@ -276,6 +276,8 @@ class UsageMonitorApp:
     def _service_login_worker(self, key: str) -> None:
         """サービス個別ログインワーカー（別スレッド）"""
         scraper = self.scrapers[key]
+        error_msg = None
+        data = None
         try:
             # Phase 1: 表のブラウザでログインのみ
             scraper.prompt_login = True
@@ -287,17 +289,12 @@ class UsageMonitorApp:
             scraper.headless = True
             self.root.after(0, lambda: self.status_var.set(f"Fetching {key} data..."))
             data = asyncio.run(scraper.run())
-            self.root.after(0, lambda: self._after_service_login(key, data, None))
         except Exception as exc:
             logging.error(f"[{key}] Login failed: {exc}", exc_info=True)
             error_msg = str(exc)
-            self.root.after(0, lambda: self._after_service_login(key, None, error_msg))
         finally:
-            def reset_if_stuck():
-                lbl = self.service_status_labels.get(key)
-                if lbl and lbl.cget("text") in ("Connecting...", "Fetching..."):
-                    self._set_status(key, "Not logged in", "#666666")
-            self.root.after(0, reset_if_stuck)
+            # 成功・失敗に関わらず、必ず _after_service_login を呼び出す
+            self.root.after(0, lambda: self._after_service_login(key, data, error_msg))
 
     def _after_service_login(self, key: str, data: Any, error: str | None) -> None:
         """サービス個別ログイン完了後の処理"""

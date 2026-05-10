@@ -63,7 +63,7 @@ thresholds:
 ```
 ├── main.py           # Tkinter GUI アプリ
 ├── config.yaml       # 設定ファイル（自動生成・gitignore対象）
-├── run.sh            # 起動スクリプト (Linux/WSL)
+├── run.sh            # 起動スクリプト (Linux)
 └── scrapers/
     ├── __init__.py
     ├── base.py       # BaseScraper（Playwright セッション管理）

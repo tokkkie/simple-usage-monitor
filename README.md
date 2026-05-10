@@ -63,7 +63,7 @@ thresholds:
 ```
 ├── main.py           # Tkinter GUI app
 ├── config.yaml       # Configuration (auto-generated, gitignored)
-├── run.sh            # Launch script (Linux/WSL)
+├── run.sh            # Launch script (Linux)
 └── scrapers/
     ├── __init__.py
     ├── base.py       # BaseScraper (Playwright session management)

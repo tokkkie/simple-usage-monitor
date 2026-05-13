@@ -30,12 +30,11 @@ class BaseScraper(ABC):
 
     async def _launch_context(self, playwright) -> BrowserContext:
         """永続セッション付きの Chromium コンテキストを起動して返す。"""
-        return await playwright.chromium.launch_persistent_context(
+        context = await playwright.chromium.launch_persistent_context(
             user_data_dir=str(self.config.session_dir),
             headless=self.headless,  # self.headlessで制御
             args=[
                 "--disable-blink-features=AutomationControlled",
-                "--disable-web-security",
                 "--disable-dev-shm-usage",
                 "--no-sandbox",
             ],
@@ -43,9 +42,16 @@ class BaseScraper(ABC):
             ignore_https_errors=True,  # SSL証明書エラーを無視
             user_agent=(
                 "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
             ),
         )
+        # navigator.webdriver を undefined に設定して自動化検出を回避
+        await context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+        """)
+        return context
 
     async def _get_page(self, context: BrowserContext) -> Page:
         """コンテキストの最初のページを返す。なければ新規ページを開く。"""

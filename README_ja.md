@@ -1,6 +1,6 @@
 # Simple Usage Monitor
 
-Windsurf / OpenRouter の使用量をモニタリングする Tkinter + Playwright アプリ。
+Windsurf / OpenRouter / Groq / Cerebras / SambaNova の使用量をモニタリングする Tkinter + Playwright アプリ。
 
 ![Screenshot](docs/screenshot.png)
 
@@ -26,7 +26,7 @@ chmod +x run.sh
 
 ## 使い方
 
-1. **サービスパネルをクリック**（WindSurf / OpenRouter）→ ログイン用ブラウザが開く
+1. **サービスパネルをクリック**（WindSurf / OpenRouter / Groq / Cerebras / SambaNova）→ ログイン用ブラウザが開く
 2. Google 等でログイン。MFA（多要素認証）対応（最大5分待機）
 3. ログイン検出後、ブラウザが自動的に閉じる
 4. バックグラウンドでヘッドレスにデータ取得
@@ -53,6 +53,15 @@ services:
   openrouter:
     enabled: true
     url: https://openrouter.ai/activity
+  groq:
+    enabled: true
+    url: https://console.groq.com/dashboard/usage?tab=activity
+  cerebras:
+    enabled: true
+    url: https://cloud.cerebras.ai/
+  sambanova:
+    enabled: true
+    url: https://cloud.sambanova.ai/plans/usage
 thresholds:
   windsurf_daily: 30       # 残量%がこの値以下でオレンジ表示
   windsurf_weekly: 20
@@ -68,7 +77,10 @@ thresholds:
     ├── __init__.py
     ├── base.py       # BaseScraper（Playwright セッション管理）
     ├── windsurf.py   # Windsurf スクレイパー
-    └── openrouter.py # OpenRouter スクレイパー
+    ├── openrouter.py # OpenRouter スクレイパー
+    ├── groq.py       # Groq スクレイパー
+    ├── cerebras.py   # Cerebras スクレイパー
+    └── sambanova.py  # SambaNova スクレイパー
 ```
 
 ## トラブルシューティング
